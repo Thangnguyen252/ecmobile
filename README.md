@@ -181,28 +181,7 @@ git push origin main
 
 ---
 
-## 📦 VIII. Gợi ý cấu trúc thư mục Flutter nhóm nên thống nhất
 
-```
-lib/
- ├── main.dart
- ├── theme/
- │     ├── app_colors.dart
- │     ├── app_text_styles.dart
- │     └── app_theme.dart
- ├── modules/
- │     ├── home/
- │     ├── product_detail/
- │     ├── cart/
- │     ├── auth/
- │     ├── profile/
- │     └── order/
- ├── widgets/
- └── services/
-       └── firebase_service.dart
-```
-
----
 
 ## ✅ Kết quả mong đợi
 
