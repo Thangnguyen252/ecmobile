@@ -93,7 +93,7 @@ git pull origin develop
 | F | `feature/profile` |
 | G | `feature/order` |
 
-Câu lệnh:
+Câu lệnh: (bước này gõ tay ra tên nhánh nhé, đặt tên theo chức năng ae làm nha)
 ```bash
 git checkout -b feature/admin_dashboard
 git push -u origin feature/admin_dashboard
