@@ -9,8 +9,15 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // --- STATE QUẢN LÝ CHỈ SỐ TRANG ---
   int _currentImageIndex = 0;
   int _currentCategoryIndex = 0;
+  int _currentPhonePageIndex = 0;
+  int _currentLaptopPageIndex = 0;
+
+  // --- STATE QUẢN LÝ LỌC ---
+  int _selectedPhoneChip = -1;
+  int _selectedLaptopChip = -1;
 
   final List<String> imgList = [
     'https://i.ytimg.com/vi/3s49ddWEluo/maxresdefault.jpg',
@@ -18,7 +25,6 @@ class _HomePageState extends State<HomePage> {
     'https://images.media-outreach.com/691777/image-1.png'
   ];
 
-  // Dữ liệu danh mục (Trang 1)
   final List<Map<String, dynamic>> categoryPageA = [
     {'icon': Icons.tablet_mac, 'title': 'Tablet'},
     {'icon': Icons.phone_android, 'title': 'Điện thoại'},
@@ -32,7 +38,6 @@ class _HomePageState extends State<HomePage> {
     {'icon': Icons.memory_sharp, 'title': 'CPU'},
   ];
 
-  // Dữ liệu danh mục (Trang 2)
   final List<Map<String, dynamic>> categoryPageB = [
     {'icon': Icons.mouse, 'title': 'Chuột'},
     {'icon': Icons.keyboard, 'title': 'Bàn phím'},
@@ -98,37 +103,131 @@ class _HomePageState extends State<HomePage> {
       'installment': 'Trả góp 0%',
       'rating': 4.3,
     },
+    // Thêm sản phẩm để test phân trang
+    {
+      'brand': 'Samsung',
+      'image':
+      'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/a/samsung-s23-plus-thumb-600x600.jpg',
+      'name': 'Samsung Galaxy S23+',
+      'specs': '8GB | 256GB',
+      'price': '19.999.000đ',
+      'oldPrice': '22.999.000đ',
+      'discount': 'Giảm 15%',
+      'installment': 'Trả góp 0%',
+      'rating': 4.5,
+    },
   ];
 
-  int _selectedPhoneChip = -1;
+  final List<Map<String, dynamic>> laptopProducts = [
+    {
+      'brand': 'HP',
+      'image':
+      'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/a/laptop-hp-omen-16-wf0131tx-8w943pa-thumbnails.jpg',
+      'name': 'HP Omen 16',
+      'specs': '16GB | 512GB',
+      'price': '30.999.000đ',
+      'oldPrice': '33.999.000đ',
+      'discount': 'Giảm 10%',
+      'installment': 'Trả góp 0%',
+      'rating': 4.3,
+    },
+    {
+      'brand': 'Lenovo',
+      'image':
+      'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/a/laptop-lenovo-legion-r7000p-aarp8-thumb.png',
+      'name': 'Legion R7000P',
+      'specs': '16GB | 1024 GB',
+      'price': '30.999.000đ',
+      'oldPrice': '33.999.000đ',
+      'discount': 'Giảm 10%',
+      'installment': 'Trả góp 0%',
+      'rating': 4.3,
+    },
+    {
+      'brand': 'Lenovo',
+      'image':
+      'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/e/text_ng_n_6__1_74.png',
+      'name': 'LOQ E 15',
+      'specs': '16GB | 1TB',
+      'price': '24.999.000đ',
+      'oldPrice': '33.999.000đ',
+      'discount': 'Giảm 10%',
+      'installment': 'Trả góp 0%',
+      'rating': 4.3,
+    },
+    {
+      'brand': 'Asus',
+      'image':
+      'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/a/laptop-asus-rog-strix-g16-g614ju-n3135w-thumbnails.jpg',
+      'name': 'Asus Rog Strix G16',
+      'specs': '32GB | 1TB',
+      'price': '41.999.000đ',
+      'oldPrice': '33.999.000đ',
+      'discount': 'Giảm 10%',
+      'installment': 'Trả góp 0%',
+      'rating': 4.3,
+    },
+    // --- THÊM SẢN PHẨM ĐỂ TẠO TRANG 2 ---
+    {
+      'brand': 'Acer',
+      'image':
+      'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/l/a/laptop-acer-nitro-5-an515-58-52sp-nh-qfhsv-001-thumbnails.jpg',
+      'name': 'Acer Nitro 5 Tiger',
+      'specs': '8GB | 512GB',
+      'price': '19.490.000đ',
+      'oldPrice': '22.990.000đ',
+      'discount': 'Giảm 15%',
+      'installment': 'Trả góp 0%',
+      'rating': 4.6,
+    },
+  ];
+
+  List<List<T>> _chunkList<T>(List<T> list, int chunkSize) {
+    List<List<T>> chunks = [];
+    for (int i = 0; i < list.length; i += chunkSize) {
+      chunks.add(list.sublist(
+          i, i + chunkSize > list.length ? list.length : i + chunkSize));
+    }
+    return chunks;
+  }
 
   @override
   Widget build(BuildContext context) {
+    // --- 1. TÍNH TOÁN CHIỀU CAO ĐỘNG CHO SLIDER ---
+    // Lấy chiều rộng màn hình
+    double screenWidth = MediaQuery.of(context).size.width;
+    // Tính chiều rộng 1 item (trừ padding 32.0 và spacing 16.0)
+    double itemWidth = (screenWidth - 32.0 - 16.0) / 2;
+    // Tỷ lệ thẻ mong muốn (0.5 sẽ làm thẻ cao gấp đôi chiều rộng)
+    double childAspectRatio = 0.5;
+    // Tính chiều cao 1 item
+    double itemHeight = itemWidth / childAspectRatio;
+    // Chiều cao tổng slider = 2 hàng item + spacing dọc
+    double sliderHeight = (itemHeight * 2) + 40.0; // Thêm 40px dư dả
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildTopMenu(),
-
-          // 1. SLIDER ẢNH (Giữ nguyên indicator dạng dấu gạch)
           _buildImageCarousel(),
-
           _buildSectionHeader(title: 'SẢN PHẨM NỔI BẬT', onSeeMore: () {}),
           _buildFilterChips(),
           _buildAdBanner(
               'https://cdn.tgdd.vn/Products/Images/522/294104/Slider/ipad-pro-m2-11-inch638035032348738269.jpg'),
-
-          // 2. SLIDER DANH MỤC (Indicator dạng thanh thẳng + có khoảng cách)
           _buildCategorySlider(),
 
-          _buildPhoneSection(),
-          SizedBox(height: 20),
+          // Truyền sliderHeight vào các hàm để dùng
+          _buildPhoneSection(sliderHeight, childAspectRatio),
+          _buildLaptopSection(sliderHeight, childAspectRatio),
+
+          SizedBox(height: 40),
         ],
       ),
     );
   }
 
-  // --- LOẠI 1: INDICATOR DẠNG DẤU GẠCH (Cho Slider Ảnh) ---
+  // --- INDICATORS ---
   Widget _buildDashIndicator(
       {required int currentIndex, required int totalCount}) {
     return Row(
@@ -139,7 +238,7 @@ class _HomePageState extends State<HomePage> {
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 4.0),
           height: 4.0,
-          width: isSelected ? 24.0 : 12.0, // Dài hơn khi active
+          width: isSelected ? 24.0 : 12.0,
           decoration: BoxDecoration(
             color: isSelected ? Colors.orange : Colors.grey.shade300,
             borderRadius: BorderRadius.circular(2.0),
@@ -149,10 +248,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- LOẠI 2: INDICATOR DẠNG THANH SCROLL (Cho Danh Mục) ---
   Widget _buildScrollIndicator(
       {required int currentIndex, required int totalCount}) {
-    const double indicatorWidth = 100.0; // Chiều dài tổng của thanh
+    // Hiển thị ngay cả khi chỉ có 1 trang để giữ bố cục (hoặc ẩn tùy bạn)
+    // if (totalCount <= 1) return SizedBox.shrink();
+    const double indicatorWidth = 100.0;
     const double indicatorHeight = 4.0;
 
     return Center(
@@ -160,7 +260,7 @@ class _HomePageState extends State<HomePage> {
         width: indicatorWidth,
         height: indicatorHeight,
         decoration: BoxDecoration(
-          color: Colors.grey.shade300, // Nền xám
+          color: Colors.grey.shade300,
           borderRadius: BorderRadius.circular(indicatorHeight / 2),
         ),
         child: Stack(
@@ -168,13 +268,12 @@ class _HomePageState extends State<HomePage> {
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeOut,
-              // Tính vị trí trượt: (Tổng chiều dài / Số trang) * Trang hiện tại
               left: (indicatorWidth / totalCount) * currentIndex,
               child: Container(
-                width: indicatorWidth / totalCount, // Chiều dài thanh cam
+                width: indicatorWidth / totalCount,
                 height: indicatorHeight,
                 decoration: BoxDecoration(
-                  color: Colors.orange, // Màu cam
+                  color: Colors.orange,
                   borderRadius: BorderRadius.circular(indicatorHeight / 2),
                 ),
               ),
@@ -185,6 +284,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // --- SECTIONS ---
   Widget _buildImageCarousel() {
     return Column(
       children: [
@@ -211,7 +311,6 @@ class _HomePageState extends State<HomePage> {
               .toList(),
         ),
         SizedBox(height: 10),
-        // Dùng indicator dạng gạch ngang
         _buildDashIndicator(
           currentIndex: _currentImageIndex,
           totalCount: imgList.length,
@@ -273,9 +372,7 @@ class _HomePageState extends State<HomePage> {
             );
           }).toList(),
         ),
-        // --- THÊM KHOẢNG CÁCH Ở ĐÂY ---
-        SizedBox(height: 12.0), // Cách ra một chút
-        // Dùng indicator dạng thanh scroll
+        SizedBox(height: 16.0),
         _buildScrollIndicator(
           currentIndex: _currentCategoryIndex,
           totalCount: categoryPages.length,
@@ -284,8 +381,231 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ... (Các widget khác giữ nguyên) ...
-  // Widget trợ giúp cho Menu 4 biểu tượng
+  Widget _buildPhoneSection(double sliderHeight, double aspectRatio) {
+    final filters = ['Apple', 'Samsung', 'Xiaomi', 'Vivo'];
+    List<Map<String, dynamic>> filteredProducts;
+
+    if (_selectedPhoneChip == -1) {
+      filteredProducts = phoneProducts;
+    } else {
+      String selectedBrand = filters[_selectedPhoneChip];
+      filteredProducts = phoneProducts.where((product) {
+        return product['brand'].toLowerCase() == selectedBrand.toLowerCase();
+      }).toList();
+    }
+
+    List<List<Map<String, dynamic>>> productPages =
+    _chunkList(filteredProducts, 4);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
+          child: Text(
+            'ĐIỆN THOẠI',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        _buildPhoneFilterChips(filters),
+        SizedBox(height: 10),
+        if (productPages.isNotEmpty) ...[
+          CarouselSlider(
+            options: CarouselOptions(
+              height: sliderHeight, // Sử dụng chiều cao đã tính toán
+              viewportFraction: 1.0,
+              enableInfiniteScroll: false,
+              onPageChanged: (index, reason) {
+                setState(() {
+                  _currentPhonePageIndex = index;
+                });
+              },
+            ),
+            items: productPages.map((pageProducts) {
+              return GridView.builder(
+                padding: const EdgeInsets.all(16.0),
+                physics: NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16.0,
+                  mainAxisSpacing: 16.0,
+                  childAspectRatio: aspectRatio, // Sử dụng tỷ lệ đã tính toán
+                ),
+                itemCount: pageProducts.length,
+                itemBuilder: (context, index) {
+                  return _buildProductCard(pageProducts[index]);
+                },
+              );
+            }).toList(),
+          ),
+          SizedBox(height: 10),
+          _buildScrollIndicator(
+            currentIndex: _currentPhonePageIndex,
+            totalCount: productPages.length,
+          ),
+        ] else
+          Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Center(child: Text("Không tìm thấy sản phẩm nào")),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPhoneFilterChips(List<String> filters) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      child: Row(
+        children: List.generate(filters.length, (index) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: ChoiceChip(
+              label: Text(filters[index]),
+              selected: _selectedPhoneChip == index,
+              onSelected: (selected) {
+                setState(() {
+                  _selectedPhoneChip = selected ? index : -1;
+                  _currentPhonePageIndex = 0;
+                });
+              },
+              selectedColor: Colors.blue.shade100,
+              backgroundColor: Colors.grey.shade100,
+              labelStyle: TextStyle(
+                color: _selectedPhoneChip == index
+                    ? Colors.blue.shade900
+                    : Colors.black,
+              ),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20.0),
+                  side: BorderSide(
+                    color: _selectedPhoneChip == index
+                        ? Colors.blue.shade100
+                        : Colors.grey.shade300,
+                  )),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildLaptopSection(double sliderHeight, double aspectRatio) {
+    final filters = ['HP', 'Lenovo', 'Asus', 'Acer'];
+    List<Map<String, dynamic>> filteredProducts;
+
+    if (_selectedLaptopChip == -1) {
+      filteredProducts = laptopProducts;
+    } else {
+      String selectedBrand = filters[_selectedLaptopChip];
+      filteredProducts = laptopProducts.where((product) {
+        return product['brand'].toString().toLowerCase() ==
+            selectedBrand.toLowerCase();
+      }).toList();
+    }
+
+    List<List<Map<String, dynamic>>> productPages =
+    _chunkList(filteredProducts, 4);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
+          child: Text(
+            'LAPTOP',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        _buildLaptopFilterChips(filters),
+        SizedBox(height: 10),
+        if (productPages.isNotEmpty) ...[
+          CarouselSlider(
+            options: CarouselOptions(
+              height: sliderHeight, // Sử dụng chiều cao đã tính toán
+              viewportFraction: 1.0,
+              enableInfiniteScroll: false,
+              onPageChanged: (index, reason) {
+                setState(() {
+                  _currentLaptopPageIndex = index;
+                });
+              },
+            ),
+            items: productPages.map((pageProducts) {
+              return GridView.builder(
+                padding: const EdgeInsets.all(16.0),
+                physics: NeverScrollableScrollPhysics(),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16.0,
+                  mainAxisSpacing: 16.0,
+                  childAspectRatio: aspectRatio, // Sử dụng tỷ lệ đã tính toán
+                ),
+                itemCount: pageProducts.length,
+                itemBuilder: (context, index) {
+                  return _buildProductCard(pageProducts[index]);
+                },
+              );
+            }).toList(),
+          ),
+          SizedBox(height: 10),
+          _buildScrollIndicator(
+            currentIndex: _currentLaptopPageIndex,
+            totalCount: productPages.length,
+          ),
+        ] else
+          Padding(
+            padding: const EdgeInsets.all(32.0),
+            child: Center(child: Text("Không tìm thấy sản phẩm nào")),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLaptopFilterChips(List<String> filters) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      child: Row(
+        children: List.generate(filters.length, (index) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: ChoiceChip(
+              label: Text(filters[index]),
+              selected: _selectedLaptopChip == index,
+              onSelected: (selected) {
+                setState(() {
+                  _selectedLaptopChip = selected ? index : -1;
+                  _currentLaptopPageIndex = 0;
+                });
+              },
+              selectedColor: Colors.blue.shade100,
+              backgroundColor: Colors.grey.shade100,
+              labelStyle: TextStyle(
+                color: _selectedLaptopChip == index
+                    ? Colors.blue.shade900
+                    : Colors.black,
+              ),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20.0),
+                  side: BorderSide(
+                    color: _selectedLaptopChip == index
+                        ? Colors.blue.shade100
+                        : Colors.grey.shade300,
+                  )),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
   Widget _buildTopMenu() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -358,9 +678,7 @@ class _HomePageState extends State<HomePage> {
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
           child: ActionChip(
             label: Text(filter),
-            onPressed: () {
-              // Xử lý logic lọc
-            },
+            onPressed: () {},
             backgroundColor: Colors.grey.shade200,
           ),
         ))
@@ -375,91 +693,6 @@ class _HomePageState extends State<HomePage> {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12.0),
         child: Image.network(imageUrl, fit: BoxFit.cover),
-      ),
-    );
-  }
-
-  Widget _buildPhoneSection() {
-    final filters = ['Apple', 'Samsung', 'Xiaomi', 'Vivo'];
-    List<Map<String, dynamic>> filteredProducts;
-
-    if (_selectedPhoneChip == -1) {
-      filteredProducts = phoneProducts;
-    } else {
-      String selectedBrand = filters[_selectedPhoneChip];
-      filteredProducts = phoneProducts.where((product) {
-        return product['brand'].toLowerCase() == selectedBrand.toLowerCase();
-      }).toList();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
-          child: Text(
-            'ĐIỆN THOẠI',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        _buildPhoneFilterChips(),
-        GridView.builder(
-          padding: const EdgeInsets.all(16.0),
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            crossAxisSpacing: 16.0,
-            mainAxisSpacing: 16.0,
-            // Giữ fix overflow ở đây (0.53)
-            childAspectRatio: 0.53,
-          ),
-          itemCount: filteredProducts.length,
-          itemBuilder: (context, index) {
-            return _buildProductCard(filteredProducts[index]);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPhoneFilterChips() {
-    final filters = ['Apple', 'Samsung', 'Xiaomi', 'Vivo'];
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-      child: Row(
-        children: List.generate(filters.length, (index) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: ChoiceChip(
-              label: Text(filters[index]),
-              selected: _selectedPhoneChip == index,
-              onSelected: (selected) {
-                setState(() {
-                  _selectedPhoneChip = selected ? index : -1;
-                });
-              },
-              selectedColor: Colors.blue.shade100,
-              backgroundColor: Colors.grey.shade100,
-              labelStyle: TextStyle(
-                color: _selectedPhoneChip == index
-                    ? Colors.blue.shade900
-                    : Colors.black,
-              ),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20.0),
-                  side: BorderSide(
-                    color: _selectedPhoneChip == index
-                        ? Colors.blue.shade100
-                        : Colors.grey.shade300,
-                  )),
-            ),
-          );
-        }),
       ),
     );
   }
@@ -539,21 +772,25 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
+          // Sử dụng Expanded để nội dung chiếm hết không gian còn lại
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    product['name'],
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                  Flexible(
+                    child: Text(
+                      product['name'],
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
+                  SizedBox(height: 4),
                   Text(
                     product['specs'],
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
