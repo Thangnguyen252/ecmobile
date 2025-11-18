@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' hide CarouselController; // Giữ lại 'hide' để tránh lỗi
+import 'package:flutter/material.dart' hide CarouselController;
 import 'package:carousel_slider/carousel_slider.dart';
 
 class HomePage extends StatefulWidget {
@@ -9,15 +9,17 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Dữ liệu giả lập cho carousel (ĐÃ CÓ)
+  int _currentImageIndex = 0;
+  int _currentCategoryIndex = 0;
+
   final List<String> imgList = [
     'https://i.ytimg.com/vi/3s49ddWEluo/maxresdefault.jpg',
     'http://i.ytimg.com/vi/3i1OB6wKYms/maxresdefault.jpg',
     'https://images.media-outreach.com/691777/image-1.png'
   ];
 
-  // Dữ liệu giả lập cho lưới danh mục (ĐÃ CÓ)
-  final List<Map<String, dynamic>> categories = [
+  // Dữ liệu danh mục (Trang 1)
+  final List<Map<String, dynamic>> categoryPageA = [
     {'icon': Icons.tablet_mac, 'title': 'Tablet'},
     {'icon': Icons.phone_android, 'title': 'Điện thoại'},
     {'icon': Icons.laptop, 'title': 'Laptop'},
@@ -30,11 +32,28 @@ class _HomePageState extends State<HomePage> {
     {'icon': Icons.memory_sharp, 'title': 'CPU'},
   ];
 
-  // --- SỬA ĐỔI: Thêm 'brand' vào dữ liệu ---
+  // Dữ liệu danh mục (Trang 2)
+  final List<Map<String, dynamic>> categoryPageB = [
+    {'icon': Icons.mouse, 'title': 'Chuột'},
+    {'icon': Icons.keyboard, 'title': 'Bàn phím'},
+    {'icon': Icons.print, 'title': 'Máy in'},
+    {'icon': Icons.router, 'title': 'Router'},
+    {'icon': Icons.camera_alt, 'title': 'Camera'},
+    {'icon': Icons.watch, 'title': 'Đồng hồ'},
+    {'icon': Icons.speaker, 'title': 'Loa'},
+    {'icon': Icons.battery_charging_full, 'title': 'Sạc dự phòng'},
+    {'icon': Icons.usb, 'title': 'USB'},
+    {'icon': Icons.cable, 'title': 'Cáp sạc'},
+  ];
+
+  List<List<Map<String, dynamic>>> get categoryPages =>
+      [categoryPageA, categoryPageB];
+
   final List<Map<String, dynamic>> phoneProducts = [
     {
-      'brand': 'Apple', // <-- THÊM MỚI
-      'image': 'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-14-pro_2__5.png',
+      'brand': 'Apple',
+      'image':
+      'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-14-pro_2__5.png',
       'name': 'Iphone 14 Pro Max',
       'specs': '16GB | 512GB',
       'price': '30.999.000đ',
@@ -44,8 +63,9 @@ class _HomePageState extends State<HomePage> {
       'rating': 4.3,
     },
     {
-      'brand': 'Samsung', // <-- THÊM MỚI
-      'image': 'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/2/s23-ultra-xanh_2_1_2_2.png', // Sửa link ảnh cho khác
+      'brand': 'Samsung',
+      'image':
+      'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/2/s23-ultra-xanh_2_1_2_2.png',
       'name': 'Samsung Galaxy S23 Ultra',
       'specs': '16GB | 512GB',
       'price': '32.999.000đ',
@@ -55,8 +75,9 @@ class _HomePageState extends State<HomePage> {
       'rating': 4.3,
     },
     {
-      'brand': 'Xiaomi', // <-- THÊM MỚI
-      'image': 'https://cdn2.cellphones.com.vn/x/media/catalog/product/1/3/13_prooo_2_2.jpg', // Sửa link ảnh cho khác
+      'brand': 'Xiaomi',
+      'image':
+      'https://cdn2.cellphones.com.vn/x/media/catalog/product/1/3/13_prooo_2_2.jpg',
       'name': 'Xiaomi 13 Pro',
       'specs': '16GB | 512GB',
       'price': '23.999.000đ',
@@ -66,8 +87,9 @@ class _HomePageState extends State<HomePage> {
       'rating': 4.3,
     },
     {
-      'brand': 'Vivo', // <-- THÊM MỚI
-      'image': 'https://cdn.mobilecity.vn/mobilecity-vn/images/2022/11/vivo-x90-pro-man-hinh-2k-minh-hoa-1.jpg', // Sửa link ảnh cho khác
+      'brand': 'Vivo',
+      'image':
+      'https://cdn.mobilecity.vn/mobilecity-vn/images/2022/11/vivo-x90-pro-man-hinh-2k-minh-hoa-1.jpg',
       'name': 'Vivo X90 Pro 5G',
       'specs': '16GB | 512GB',
       'price': '16.950.000đ',
@@ -78,48 +100,191 @@ class _HomePageState extends State<HomePage> {
     },
   ];
 
-  // --- SỬA ĐỔI: Đặt trạng thái ban đầu là -1 (không chọn) ---
   int _selectedPhoneChip = -1;
 
   @override
   Widget build(BuildContext context) {
-    // Sử dụng SingleChildScrollView để cho phép cuộn
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- 1. Menu 4 biểu tượng ---
           _buildTopMenu(),
 
-          // --- 2. Carousel quảng cáo (iPhone 17) ---
+          // 1. SLIDER ẢNH (Giữ nguyên indicator dạng dấu gạch)
           _buildImageCarousel(),
 
-          // --- 3. Tiêu đề "SẢN PHẨM NỔI BẬT" ---
           _buildSectionHeader(title: 'SẢN PHẨM NỔI BẬT', onSeeMore: () {}),
-
-          // --- 4. Các chip lọc (Điện thoại, Laptop...) ---
           _buildFilterChips(),
-
-          // --- 5. Banner quảng cáo (iPad Pro) ---
           _buildAdBanner(
               'https://cdn.tgdd.vn/Products/Images/522/294104/Slider/ipad-pro-m2-11-inch638035032348738269.jpg'),
 
-          // --- 6. Lưới danh mục sản phẩm (Tablet, PC,...) ---
-          _buildCategoryGrid(),
+          // 2. SLIDER DANH MỤC (Indicator dạng thanh thẳng + có khoảng cách)
+          _buildCategorySlider(),
 
-          // --- 7. Phần "ĐIỆN THOẠI" ---
           _buildPhoneSection(),
-          // ---------------------------------
-
-          // Thêm một chút khoảng trống ở dưới cùng
           SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  // ... (Các hàm _buildTopMenu, _buildMenuItem, _buildImageCarousel, _buildSectionHeader, _buildFilterChips, _buildAdBanner, _buildCategoryGrid giữ nguyên) ...
-  // ... (Bạn có thể dán chúng vào đây nếu muốn, tôi sẽ bỏ qua để cho gọn) ...
+  // --- LOẠI 1: INDICATOR DẠNG DẤU GẠCH (Cho Slider Ảnh) ---
+  Widget _buildDashIndicator(
+      {required int currentIndex, required int totalCount}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(totalCount, (index) {
+        bool isSelected = currentIndex == index;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 4.0),
+          height: 4.0,
+          width: isSelected ? 24.0 : 12.0, // Dài hơn khi active
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.orange : Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(2.0),
+          ),
+        );
+      }),
+    );
+  }
+
+  // --- LOẠI 2: INDICATOR DẠNG THANH SCROLL (Cho Danh Mục) ---
+  Widget _buildScrollIndicator(
+      {required int currentIndex, required int totalCount}) {
+    const double indicatorWidth = 100.0; // Chiều dài tổng của thanh
+    const double indicatorHeight = 4.0;
+
+    return Center(
+      child: Container(
+        width: indicatorWidth,
+        height: indicatorHeight,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade300, // Nền xám
+          borderRadius: BorderRadius.circular(indicatorHeight / 2),
+        ),
+        child: Stack(
+          children: [
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+              // Tính vị trí trượt: (Tổng chiều dài / Số trang) * Trang hiện tại
+              left: (indicatorWidth / totalCount) * currentIndex,
+              child: Container(
+                width: indicatorWidth / totalCount, // Chiều dài thanh cam
+                height: indicatorHeight,
+                decoration: BoxDecoration(
+                  color: Colors.orange, // Màu cam
+                  borderRadius: BorderRadius.circular(indicatorHeight / 2),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageCarousel() {
+    return Column(
+      children: [
+        CarouselSlider(
+          options: CarouselOptions(
+            autoPlay: true,
+            aspectRatio: 2.0,
+            enlargeCenterPage: true,
+            onPageChanged: (index, reason) {
+              setState(() {
+                _currentImageIndex = index;
+              });
+            },
+          ),
+          items: imgList
+              .map((item) => Container(
+            child: Center(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.all(Radius.circular(12.0)),
+                  child: Image.network(item,
+                      fit: BoxFit.cover, width: 1000.0),
+                )),
+          ))
+              .toList(),
+        ),
+        SizedBox(height: 10),
+        // Dùng indicator dạng gạch ngang
+        _buildDashIndicator(
+          currentIndex: _currentImageIndex,
+          totalCount: imgList.length,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategorySlider() {
+    return Column(
+      children: [
+        CarouselSlider(
+          options: CarouselOptions(
+            height: 200.0,
+            viewportFraction: 1.0,
+            enableInfiniteScroll: false,
+            autoPlay: false,
+            onPageChanged: (index, reason) {
+              setState(() {
+                _currentCategoryIndex = index;
+              });
+            },
+          ),
+          items: categoryPages.map((pageData) {
+            return GridView.builder(
+              padding: const EdgeInsets.all(16.0),
+              physics: NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 5,
+                crossAxisSpacing: 16.0,
+                mainAxisSpacing: 16.0,
+                childAspectRatio: 0.8,
+              ),
+              itemCount: pageData.length,
+              itemBuilder: (context, index) {
+                final category = pageData[index];
+                return Column(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(category['icon'],
+                          color: Colors.blue.shade700, size: 30),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      category['title'],
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 12),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                );
+              },
+            );
+          }).toList(),
+        ),
+        // --- THÊM KHOẢNG CÁCH Ở ĐÂY ---
+        SizedBox(height: 12.0), // Cách ra một chút
+        // Dùng indicator dạng thanh scroll
+        _buildScrollIndicator(
+          currentIndex: _currentCategoryIndex,
+          totalCount: categoryPages.length,
+        ),
+      ],
+    );
+  }
+
+  // ... (Các widget khác giữ nguyên) ...
   // Widget trợ giúp cho Menu 4 biểu tượng
   Widget _buildTopMenu() {
     return Container(
@@ -159,28 +324,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Widget trợ giúp cho Carousel hình ảnh
-  Widget _buildImageCarousel() {
-    return CarouselSlider(
-      options: CarouselOptions(
-        autoPlay: true,
-        aspectRatio: 2.0,
-        enlargeCenterPage: true,
-      ),
-      items: imgList
-          .map((item) => Container(
-        child: Center(
-            child: ClipRRect(
-              borderRadius: BorderRadius.all(Radius.circular(12.0)),
-              child: Image.network(item,
-                  fit: BoxFit.cover, width: 1000.0),
-            )),
-      ))
-          .toList(),
-    );
-  }
-
-  // Widget trợ giúp cho Tiêu đề các mục
   Widget _buildSectionHeader(
       {required String title, required VoidCallback onSeeMore}) {
     return Padding(
@@ -204,7 +347,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Widget trợ giúp cho các Chip lọc
   Widget _buildFilterChips() {
     final filters = ['Điện thoại', 'Laptop', 'Bộ PC', 'Linh kiện'];
     return SingleChildScrollView(
@@ -227,7 +369,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Widget trợ giúp cho Banner quảng cáo
   Widget _buildAdBanner(String imageUrl) {
     return Container(
       margin: const EdgeInsets.all(16.0),
@@ -238,72 +379,22 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Widget trợ giúp cho Lưới danh mục
-  Widget _buildCategoryGrid() {
-    return GridView.builder(
-      // 2 dòng quan trọng để GridView hoạt động bên trong SingleChildScrollView
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-
-      padding: const EdgeInsets.all(16.0),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 5, // 5 mục trên một hàng
-        crossAxisSpacing: 16.0,
-        mainAxisSpacing: 16.0,
-        childAspectRatio: 0.8, // Điều chỉnh tỷ lệ để vừa vặn
-      ),
-      itemCount: categories.length,
-      itemBuilder: (context, index) {
-        final category = categories[index];
-        return Column(
-          children: [
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child:
-              Icon(category['icon'], color: Colors.blue.shade700, size: 30),
-            ),
-            SizedBox(height: 8),
-            Text(
-              category['title'],
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 12),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        );
-      },
-    );
-  }
-  // --- HÀM ĐÃ SỬA ĐỔI ---
-
-  // 1. Widget chính cho toàn bộ khu vực "ĐIỆN THOẠI"
   Widget _buildPhoneSection() {
-    // --- THÊM MỚI: Logic lọc ---
-    final filters = ['Apple', 'Samsung', 'Xiaomi', 'Vivo']; // Danh sách bộ lọc
-    List<Map<String, dynamic>> filteredProducts; // Danh sách sản phẩm đã lọc
+    final filters = ['Apple', 'Samsung', 'Xiaomi', 'Vivo'];
+    List<Map<String, dynamic>> filteredProducts;
 
     if (_selectedPhoneChip == -1) {
-      // Nếu không có chip nào được chọn, hiển thị tất cả
       filteredProducts = phoneProducts;
     } else {
-      // Nếu có chip được chọn, lọc danh sách
       String selectedBrand = filters[_selectedPhoneChip];
       filteredProducts = phoneProducts.where((product) {
-        // So sánh trường 'brand' mới (không phân biệt hoa thường)
         return product['brand'].toLowerCase() == selectedBrand.toLowerCase();
       }).toList();
     }
-    // ----------------------------
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Tiêu đề
         Padding(
           padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
           child: Text(
@@ -314,35 +405,28 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-
-        // Các chip lọc
-        _buildPhoneFilterChips(), // Hàm này gọi danh sách chip đã sửa
-
-        // Lưới sản phẩm
+        _buildPhoneFilterChips(),
         GridView.builder(
           padding: const EdgeInsets.all(16.0),
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2, // 2 cột
+            crossAxisCount: 2,
             crossAxisSpacing: 16.0,
             mainAxisSpacing: 16.0,
-            childAspectRatio: 0.6, // Điều chỉnh tỷ lệ này để vừa vặn
+            // Giữ fix overflow ở đây (0.53)
+            childAspectRatio: 0.53,
           ),
-          // --- SỬA ĐỔI: Dùng danh sách đã lọc ---
           itemCount: filteredProducts.length,
           itemBuilder: (context, index) {
             return _buildProductCard(filteredProducts[index]);
           },
-          // ---------------------------------
         ),
       ],
     );
   }
 
-  // 2. Widget cho các chip lọc (Apple, Samsung...)
   Widget _buildPhoneFilterChips() {
-    // --- SỬA ĐỔI: Đổi 'OPPO' thành 'Vivo' để khớp dữ liệu ---
     final filters = ['Apple', 'Samsung', 'Xiaomi', 'Vivo'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -356,7 +440,6 @@ class _HomePageState extends State<HomePage> {
               selected: _selectedPhoneChip == index,
               onSelected: (selected) {
                 setState(() {
-                  // Logic này đã đúng: chọn thì gán index, bỏ chọn thì gán -1
                   _selectedPhoneChip = selected ? index : -1;
                 });
               },
@@ -381,7 +464,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 3. Widget cho một thẻ SẢN PHẨM (Giữ nguyên)
   Widget _buildProductCard(Map<String, dynamic> product) {
     return Container(
       decoration: BoxDecoration(
@@ -400,17 +482,15 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Ảnh và các tag giảm giá
           Stack(
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
                 child: Image.network(
                   product['image'],
-                  height: 150, // Đặt chiều cao cố định
+                  height: 150,
                   width: double.infinity,
-                  fit: BoxFit.contain, // Dùng 'contain' để thấy rõ sản phẩm
-                  // Thêm loadingBuilder và errorBuilder để chuyên nghiệp hơn
+                  fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 150,
                     color: Colors.grey.shade200,
@@ -419,7 +499,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              // Tag Trả góp
               Positioned(
                 top: 8,
                 left: 8,
@@ -439,7 +518,6 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ),
-              // Tag Giảm giá
               Positioned(
                 top: 8,
                 right: 8,
@@ -461,69 +539,66 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-
-          // Thông tin sản phẩm
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  product['name'],
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  product['specs'],
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  product['price'],
-                  style: TextStyle(
-                    color: Colors.red.shade700,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Text(
-                  product['oldPrice'],
-                  style: TextStyle(
-                    color: Colors.grey.shade500,
-                    decoration: TextDecoration.lineThrough,
-                    fontSize: 12,
-                  ),
-                ),
-                SizedBox(height: 8),
-                // Các tag khuyến mãi (ví dụ)
-                _buildPromoTag('Tặng gói Google AI 1 năm'),
-                _buildPromoTag('Trả góp 0% qua thẻ'),
-                SizedBox(height: 8),
-
-                // Đánh giá và Yêu thích
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.star, color: Colors.amber, size: 16),
-                        SizedBox(width: 4),
-                        Text(
-                          product['rating'].toString(),
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ],
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product['name'],
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
-                    Icon(Icons.favorite_border, color: Colors.grey, size: 20),
-                  ],
-                ),
-              ],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    product['specs'],
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    product['price'],
+                    style: TextStyle(
+                      color: Colors.red.shade700,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  Text(
+                    product['oldPrice'],
+                    style: TextStyle(
+                      color: Colors.grey.shade500,
+                      decoration: TextDecoration.lineThrough,
+                      fontSize: 12,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  _buildPromoTag('Tặng gói Google AI 1 năm'),
+                  _buildPromoTag('Trả góp 0% qua thẻ'),
+                  Spacer(),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.star, color: Colors.amber, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            product['rating'].toString(),
+                            style: TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                      Icon(Icons.favorite_border, color: Colors.grey, size: 20),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -531,7 +606,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 4. Widget trợ giúp nhỏ cho các tag khuyến mãi (Giữ nguyên)
   Widget _buildPromoTag(String text) {
     return Container(
       margin: const EdgeInsets.only(top: 4.0),
@@ -543,6 +617,8 @@ class _HomePageState extends State<HomePage> {
       child: Text(
         text,
         style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
