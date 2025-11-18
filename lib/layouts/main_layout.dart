@@ -1,3 +1,6 @@
+
+import 'package:ecmobile/chat_history_screen.dart';
+import 'package:ecmobile/product_search_screen.dart'; // <<< THÊM MỚI
 import 'package:flutter/material.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/screens/home_page.dart';
@@ -15,8 +18,6 @@ class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
   // --- QUẢN LÝ STATE CHO APPBAR ---
-  // Vì AppBar giờ đã thuộc về MainLayout,
-  // MainLayout phải chịu trách nhiệm quản lý state của nó.
   final TextEditingController _searchController = TextEditingController();
   int _cartItemCount = 5; // Dữ liệu giả, sau này lấy từ Firebase
   // ---
@@ -25,7 +26,7 @@ class _MainLayoutState extends State<MainLayout> {
     const HomePage(),
     const Center(child: Text('Trang Danh mục')),
     const Center(child: Text('Trang Đơn hàng')),
-    const Center(child: Text('Trang AI Hỗ trợ')),
+    const Center(child: Text('Trang AI Hỗ trợ')), // Placeholder, will not be shown
     const Center(child: Text('Trang Tài khoản')),
   ];
 
@@ -36,9 +37,16 @@ class _MainLayoutState extends State<MainLayout> {
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (index == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ChatHistoryScreen()),
+      );
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   void _navigateToCart() {
@@ -50,16 +58,25 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
+  // <<< THÊM MỚI: Hàm điều hướng đến màn hình tìm kiếm
+  void _navigateToSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProductSearchScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // --- APPBAR ĐÃ ĐƯỢC ĐẶT TẠI ĐÂY ---
       appBar: CustomSearchAppBar(
-        searchController: _searchController, // Dùng controller đã quản lý
-        cartItemCount: _cartItemCount, // Dùng cart item đã quản lý
+        searchController: _searchController,
+        cartItemCount: _cartItemCount,
         onCartPressed: _navigateToCart,
+        onSearchTap: _navigateToSearch, // <<< THÊM MỚI: Gán hàm vào sự kiện nhấn
       ),
-      // ---
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,

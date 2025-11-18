@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 
@@ -9,6 +10,7 @@ class CustomSearchAppBar extends StatelessWidget implements PreferredSizeWidget 
   final VoidCallback onCartPressed;
   final VoidCallback? onBackButtonPressed;
   final bool showBackButton;
+  final VoidCallback? onSearchTap; // <<< THÊM MỚI: Callback khi nhấn vào thanh tìm kiếm
 
   const CustomSearchAppBar({
     Key? key,
@@ -17,6 +19,7 @@ class CustomSearchAppBar extends StatelessWidget implements PreferredSizeWidget 
     required this.onCartPressed,
     this.onBackButtonPressed,
     this.showBackButton = false,
+    this.onSearchTap, // <<< THÊM MỚI
   }) : super(key: key);
 
   @override
@@ -36,21 +39,27 @@ class CustomSearchAppBar extends StatelessWidget implements PreferredSizeWidget 
 
               // 2. Ô tìm kiếm
               Expanded(
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: TextField(
-                    controller: searchController,
-                    style: const TextStyle(color: AppColors.textPrimary),
-                    decoration: const InputDecoration(
-                      hintText: "Bạn muốn mua gì hôm nay?",
-                      hintStyle: TextStyle(color: AppColors.textSecondary),
-                      prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 10.0),
+                child: GestureDetector( // <<< THÊM MỚI: Bọc trong GestureDetector
+                  onTap: onSearchTap, // <<< THÊM MỚI: Gọi callback khi nhấn
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: AbsorbPointer( // <<< THÊM MỚI: Vô hiệu hóa tương tác của TextField
+                      child: TextField(
+                        controller: searchController,
+                        enabled: false, // <<< THÊM MỚI: Vô hiệu hóa để GestureDetector bắt sự kiện
+                        style: const TextStyle(color: AppColors.textPrimary),
+                        decoration: const InputDecoration(
+                          hintText: "Bạn muốn mua gì hôm nay?",
+                          hintStyle: TextStyle(color: AppColors.textSecondary),
+                          prefixIcon: Icon(Icons.search, color: AppColors.textSecondary),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 10.0),
+                        ),
+                      ),
                     ),
                   ),
                 ),
