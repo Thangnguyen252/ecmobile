@@ -5,6 +5,14 @@ import 'package:intl/intl.dart';
 import 'dart:convert'; // Để decode JSON
 import 'package:http/http.dart' as http; // Để gọi API
 import 'package:ecmobile/models/address_model.dart'; // Model địa chỉ
+import 'package:random_string/random_string.dart'; // Để tạo mã ngẫu nhiên
+import 'package:ecmobile/screens/qr_payment_page.dart'; // Màn hình QR
+import 'package:ecmobile/screens/payment_success_page.dart'; // --- THÊM IMPORT NÀY ---
+
+// Định nghĩa các phương thức thanh toán
+enum PaymentMethod { qr, cod }
+
+// Model đơn giản cho Voucher
 class Voucher {
   final String code;
   final double amount;
@@ -13,6 +21,7 @@ class Voucher {
   Voucher(
       {required this.code, required this.amount, required this.description});
 }
+
 class CheckoutPage extends StatefulWidget {
   final List<CartItemModel> itemsToCheckout;
 
@@ -25,7 +34,6 @@ class CheckoutPage extends StatefulWidget {
   State<CheckoutPage> createState() => _CheckoutPageState();
 }
 
-// --- THÊM 'SingleTickerProviderStateMixin' ĐỂ ĐIỀU KHIỂN TABCONTROLLER ---
 class _CheckoutPageState extends State<CheckoutPage>
     with SingleTickerProviderStateMixin {
   // Controller để điều khiển TabBar
@@ -41,13 +49,9 @@ class _CheckoutPageState extends State<CheckoutPage>
   // Controller cho các ô text field
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
-  // --- THÊM CONTROLLER VÀ STATE CHO VOUCHER ---
   final TextEditingController _voucherCodeController = TextEditingController();
 
-  // --- STATE CHO DROPDOWN ĐỘNG ---
-  List<Province> _provinces = [];
-  List<District> _districts = [];
-  List<Ward> _wards = [];
+  // Voucher
   final List<Voucher> _availableVouchers = [
     Voucher(
         code: 'GIAM50K',
@@ -60,6 +64,15 @@ class _CheckoutPageState extends State<CheckoutPage>
   ];
   double _appliedVoucherDiscount = 0.0;
   String? _appliedVoucherCode;
+
+  // Payment Method
+  PaymentMethod _selectedPaymentMethod = PaymentMethod.qr; // Mặc định là QR
+
+  // --- STATE CHO DROPDOWN ĐỘNG ---
+  List<Province> _provinces = [];
+  List<District> _districts = [];
+  List<Ward> _wards = [];
+
   Province? _selectedProvince;
   District? _selectedDistrict;
   Ward? _selectedWard;
@@ -67,9 +80,6 @@ class _CheckoutPageState extends State<CheckoutPage>
   bool _isLoadingProvinces = true;
   bool _isLoadingDistricts = false;
   bool _isLoadingWards = false;
-
-  // --- STATE CHO TAB THANH TOÁN ---
-  int _selectedPaymentMethod = 1; // 1: Quét mã QR (Theo Figma)
 
   // Các màu sắc từ Figma
   final Color figmaBgColor = const Color(0xFFF1F1F1);
@@ -79,135 +89,21 @@ class _CheckoutPageState extends State<CheckoutPage>
   @override
   void initState() {
     super.initState();
-    // Khởi tạo TabController với 2 tab
     _tabController = TabController(length: 2, vsync: this);
     _loadProvinces(); // Tải danh sách tỉnh/thành
   }
 
   @override
   void dispose() {
-    _tabController.dispose(); // Hủy controller
+    _tabController.dispose();
     _addressController.dispose();
     _notesController.dispose();
+    _voucherCodeController.dispose();
     super.dispose();
   }
-  void _applyVoucher(String code) {
-    if (code.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng nhập mã voucher'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
 
-    final codeUpperCase = code.toUpperCase();
-    final voucher = _availableVouchers.firstWhere(
-          (v) => v.code.toUpperCase() == codeUpperCase,
-      // Trả về voucher rỗng nếu không tìm thấy
-      orElse: () =>
-          Voucher(code: '', amount: 0.0, description: 'Không hợp lệ'),
-    );
-
-    if (voucher.amount > 0) {
-      setState(() {
-        _appliedVoucherDiscount = voucher.amount;
-        _appliedVoucherCode = voucher.code;
-        _voucherCodeController.text = voucher.code;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Đã áp dụng voucher ${voucher.code}!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      setState(() {
-        // Reset nếu mã không hợp lệ
-        if (_appliedVoucherDiscount > 0) {
-          _appliedVoucherDiscount = 0.0;
-          _appliedVoucherCode = null;
-        }
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Mã voucher không hợp lệ hoặc đã hết hạn.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-    // Đóng bàn phím
-    FocusScope.of(context).unfocus();
-  }
-  void _showVoucherPopup() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Voucher có sẵn',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Dùng ListView.separated để có đường kẻ
-              ListView.separated(
-                shrinkWrap: true,
-                itemCount: _availableVouchers.length,
-                separatorBuilder: (context, index) => const Divider(),
-                itemBuilder: (context, index) {
-                  final voucher = _availableVouchers[index];
-                  bool isApplied = _appliedVoucherCode == voucher.code;
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(
-                      voucher.code,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: isApplied ? AppColors.primary : AppColors.textPrimary,
-                      ),
-                    ),
-                    subtitle: Text(voucher.description),
-                    trailing: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isApplied
-                            ? Colors.grey
-                            : AppColors.primary,
-                      ),
-                      child: Text(isApplied ? 'Đã áp dụng' : 'Áp dụng'),
-                      onPressed: isApplied
-                          ? null // Vô hiệu hóa nút nếu đã áp dụng
-                          : () {
-                        _applyVoucher(voucher.code);
-                        Navigator.pop(context); // Đóng popup
-                      },
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-  // ---
-  // --- CÁC HÀM GỌI API (Giữ nguyên) ---
+  // --- CÁC HÀM GỌI API (ĐỊA CHỈ) ---
   Future<void> _loadProvinces() async {
-    // ... (Giữ nguyên code _loadProvinces) ...
     setState(() {
       _isLoadingProvinces = true;
     });
@@ -231,7 +127,6 @@ class _CheckoutPageState extends State<CheckoutPage>
   }
 
   Future<void> _loadDistricts(int provinceCode) async {
-    // ... (Giữ nguyên code _loadDistricts) ...
     setState(() {
       _isLoadingDistricts = true;
       _districts = [];
@@ -262,7 +157,6 @@ class _CheckoutPageState extends State<CheckoutPage>
   }
 
   Future<void> _loadWards(int districtCode) async {
-    // ... (Giữ nguyên code _loadWards) ...
     setState(() {
       _isLoadingWards = true;
       _wards = [];
@@ -288,9 +182,121 @@ class _CheckoutPageState extends State<CheckoutPage>
       });
     }
   }
-  // --- KẾT THÚC HÀM API ---
 
-  // --- HÀM TÍNH TOÁN & ĐỊNH DẠNG (Giữ nguyên) ---
+  // --- LOGIC VOUCHER ---
+  void _applyVoucher(String code) {
+    if (code.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng nhập mã voucher'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final codeUpperCase = code.toUpperCase();
+    final voucher = _availableVouchers.firstWhere(
+          (v) => v.code.toUpperCase() == codeUpperCase,
+      orElse: () =>
+          Voucher(code: '', amount: 0.0, description: 'Không hợp lệ'),
+    );
+
+    if (voucher.amount > 0) {
+      setState(() {
+        _appliedVoucherDiscount = voucher.amount;
+        _appliedVoucherCode = voucher.code;
+        _voucherCodeController.text = voucher.code;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Đã áp dụng voucher ${voucher.code}!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      setState(() {
+        if (_appliedVoucherDiscount > 0) {
+          _appliedVoucherDiscount = 0.0;
+          _appliedVoucherCode = null;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Mã voucher không hợp lệ hoặc đã hết hạn.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+    FocusScope.of(context).unfocus();
+  }
+
+  void _showVoucherPopup() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Voucher có sẵn',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListView.separated(
+                shrinkWrap: true,
+                itemCount: _availableVouchers.length,
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  final voucher = _availableVouchers[index];
+                  bool isApplied = _appliedVoucherCode == voucher.code;
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      voucher.code,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isApplied
+                            ? AppColors.primary
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(voucher.description),
+                    trailing: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                        isApplied ? Colors.grey : AppColors.primary,
+                      ),
+                      child: Text(isApplied ? 'Đã áp dụng' : 'Áp dụng'),
+                      onPressed: isApplied
+                          ? null
+                          : () {
+                        _applyVoucher(voucher.code);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // --- HÀM TIỆN ÍCH ---
   String _formatPrice(double price) {
     final format = NumberFormat.currency(
       locale: 'vi_VN',
@@ -314,23 +320,17 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // --- HÀM MỚI: Lấy thông tin địa chỉ đầy đủ ---
   String _getFullAddress() {
-    // Hàm này sẽ lấy dữ liệu từ các state và controller
     final address = _addressController.text;
     final ward = _selectedWard?.name ?? "";
     final district = _selectedDistrict?.name ?? "";
     final province = _selectedProvince?.name ?? "";
-
-    // Ghép chuỗi, bỏ qua các phần rỗng
     return [address, ward, district, province]
         .where((s) => s.isNotEmpty)
         .join(", ");
   }
 
-  // --- HÀM MỚI: Chuyển tab ---
   void _navigateToPaymentTab() {
-    // Kiểm tra xem các trường bắt buộc đã được điền chưa (ví dụ)
     if (_selectedProvince == null ||
         _selectedDistrict == null ||
         _selectedWard == null ||
@@ -341,50 +341,36 @@ class _CheckoutPageState extends State<CheckoutPage>
           backgroundColor: Colors.red,
         ),
       );
-      return; // Không chuyển tab nếu thiếu thông tin
+      return;
     }
-
-    // Nếu đủ thông tin, chuyển sang Tab 2
     setState(() {
-      // Nếu đủ thông tin, chuyển sang Tab 2
       _tabController.animateTo(1);
     });
-
   }
-  // ---
 
   @override
   Widget build(BuildContext context) {
-    // KHÔNG SỬ DỤNG DefaultTabController nữa
     return Scaffold(
       backgroundColor: figmaBgColor,
       body: Column(
         children: [
-          // 1. AppBar Tùy chỉnh (Màu cam)
           _buildCheckoutAppBar(),
-          // 2. TabBar (Phần dưới màu cam)
           _buildCustomTabBar(),
-          // 3. Nội dung trang
           Expanded(
             child: TabBarView(
-              controller: _tabController, // Gán controller
-              physics:
-              const NeverScrollableScrollPhysics(), // Ngăn người dùng vuốt
+              controller: _tabController,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
-                // Tab 1: Thông tin (có footer "Tiếp tục")
                 _buildInfoTab(),
-                // Tab 2: Thanh toán (có footer "Thanh toán")
-                _buildPaymentTab(), // HÀM MỚI
+                _buildPaymentTab(),
               ],
             ),
           ),
         ],
       ),
-      // XÓA 'bottomNavigationBar' KHỎI SCaFFOLD
     );
   }
 
-  // --- AppBar Tùy chỉnh (Giữ nguyên) ---
   PreferredSizeWidget _buildCheckoutAppBar() {
     return AppBar(
       backgroundColor: AppColors.primary,
@@ -406,20 +392,19 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // --- TabBar Tùy chỉnh (Giữ nguyên) ---
   Widget _buildCustomTabBar() {
     return Container(
       height: 48,
-      color: AppColors.primary, // Nền cam
+      color: AppColors.primary,
       child: TabBar(
-        controller: _tabController, // Gán controller
-        indicatorColor: AppColors.white, // Gạch chân trắng
+        controller: _tabController,
+        indicatorColor: AppColors.white,
         indicatorWeight: 3,
         indicatorPadding: const EdgeInsets.symmetric(horizontal: 20),
-        labelColor: AppColors.white, // Chữ trắng
+        labelColor: AppColors.white,
         labelStyle:
         const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-        unselectedLabelColor: AppColors.white.withOpacity(0.7), // Chữ trắng mờ
+        unselectedLabelColor: AppColors.white.withOpacity(0.7),
         unselectedLabelStyle:
         const TextStyle(fontSize: 15, fontWeight: FontWeight.normal),
         tabs: const [
@@ -430,7 +415,7 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // --- Tab 1: Nội dung trang thông tin (Đã thêm Footer) ---
+  // --- TAB 1: THÔNG TIN ---
   Widget _buildInfoTab() {
     return Column(
       children: [
@@ -440,10 +425,8 @@ class _CheckoutPageState extends State<CheckoutPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Danh sách sản phẩm
                 _buildProductListSection(),
                 const SizedBox(height: 16),
-                // 2. Tiêu đề "Thông tin nhận hàng"
                 const Text(
                   'Thông tin nhận hàng',
                   style: TextStyle(
@@ -453,10 +436,8 @@ class _CheckoutPageState extends State<CheckoutPage>
                   ),
                 ),
                 const SizedBox(height: 12),
-                // 3. Khối thông tin người dùng
                 _buildUserInfoSection(),
                 const SizedBox(height: 18),
-                // 4. Các ô nhập liệu (Dropdown động)
                 _buildDynamicDropdown<Province>(
                   label: "Tỉnh/ Thành phố",
                   hint: "Chọn tỉnh/thành phố",
@@ -479,7 +460,8 @@ class _CheckoutPageState extends State<CheckoutPage>
                   value: _selectedDistrict,
                   items: _districts,
                   isLoading: _isLoadingDistricts,
-                  isEnabled: _selectedProvince != null && !_isLoadingDistricts,
+                  isEnabled:
+                  _selectedProvince != null && !_isLoadingDistricts,
                   getItemName: (district) => district.name,
                   onChanged: (district) {
                     if (district != null) {
@@ -496,7 +478,8 @@ class _CheckoutPageState extends State<CheckoutPage>
                   value: _selectedWard,
                   items: _wards,
                   isLoading: _isLoadingWards,
-                  isEnabled: _selectedDistrict != null && !_isLoadingWards,
+                  isEnabled:
+                  _selectedDistrict != null && !_isLoadingWards,
                   getItemName: (ward) => ward.name,
                   onChanged: (val) {
                     setState(() => _selectedWard = val);
@@ -517,13 +500,11 @@ class _CheckoutPageState extends State<CheckoutPage>
             ),
           ),
         ),
-        // --- FOOTER CỦA TAB 1 ---
         _buildInfoTabFooter(),
       ],
     );
   }
 
-  // --- FOOTER CỦA TAB 1 ---
   Widget _buildInfoTabFooter() {
     final double totalPrice = _calculateTotalPrice();
     final double totalSaving = _calculateTotalSaving();
@@ -544,7 +525,6 @@ class _CheckoutPageState extends State<CheckoutPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Tổng tiền & Tiết kiệm
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -558,7 +538,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF2E7D32), // Xanh lá
+                        color: Color(0xFF2E7D32),
                       ),
                     ),
                   ],
@@ -574,7 +554,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: figmaRedPrice, // Đỏ
+                        color: AppColors.primary,
                       ),
                     ),
                   ],
@@ -583,13 +563,11 @@ class _CheckoutPageState extends State<CheckoutPage>
             ],
           ),
           const SizedBox(height: 16),
-          // Nút "Tiếp tục thanh toán" -> Chuyển sang Tab 2
           SizedBox(
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed:
-              _navigateToPaymentTab, // GỌI HÀM CHUYỂN TAB
+              onPressed: _navigateToPaymentTab,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
@@ -611,9 +589,8 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // --- HÀM MỚI: XÂY DỰNG TAB 2 (THANH TOÁN) ---
+  // --- TAB 2: THANH TOÁN ---
   Widget _buildPaymentTab() {
-    // Lấy thông tin từ các state và controller
     final String fullAddress = _getFullAddress();
     final String notes = _notesController.text.isNotEmpty
         ? _notesController.text
@@ -621,10 +598,8 @@ class _CheckoutPageState extends State<CheckoutPage>
 
     final double totalPrice = _calculateTotalPrice();
     final double totalSaving = _calculateTotalSaving();
-    // Giả sử phí vận chuyển, giảm giá (lấy từ Figma)
-    final double shippingFee = 0.0; // Miễn phí
-    final double voucherDiscount = 50000.0;
-    final double finalTotal = totalPrice - _appliedVoucherDiscount; // SỬA DÒNG NÀY
+    final double shippingFee = 0.0;
+    final double finalTotal = totalPrice - _appliedVoucherDiscount;
 
     return Column(
       children: [
@@ -634,40 +609,27 @@ class _CheckoutPageState extends State<CheckoutPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Danh sách sản phẩm (Tương tự Tab 1)
                 _buildProductListSection(),
                 const SizedBox(height: 16),
-
-                // 2. Thông tin thanh toán (Mã khuyến mãi, Voucher)
-                _buildPaymentInfoSection(
-                    totalPrice, shippingFee, _appliedVoucherDiscount, totalSaving),// <-- SỬA ĐỔI: Thêm totalSaving
+                _buildPaymentInfoSection(totalPrice, shippingFee,
+                    _appliedVoucherDiscount, totalSaving),
                 const SizedBox(height: 16),
-
-                // 3. Phương thức thanh toán (Radio button)
                 _buildPaymentMethodSection(),
                 const SizedBox(height: 16),
-
-                // 4. Thông tin người nhận (Lấy từ state)
                 _buildReceiverInfoSection(fullAddress, notes),
                 const SizedBox(height: 16),
-
-                // 5. Điều khoản
                 _buildTermsSection(),
               ],
             ),
           ),
         ),
-        // --- FOOTER CỦA TAB 2 ---
-        _buildPaymentTabFooter(finalTotal, totalSaving),
+        _buildPaymentFooter(finalTotal),
       ],
     );
   }
 
-  // --- Widget con cho Tab 2 ---
-
-  // 2. Thông tin thanh toán (Mã KM, Voucher)
   Widget _buildPaymentInfoSection(double subtotal, double shippingFee,
-      double voucherDiscount, double totalSaving) { // <-- SỬA ĐỔI: Thêm totalSaving
+      double voucherDiscount, double totalSaving) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -693,7 +655,6 @@ class _CheckoutPageState extends State<CheckoutPage>
             ),
           ),
           const SizedBox(height: 16),
-          // Mã khuyến mãi
           Row(
             children: [
               Expanded(
@@ -717,7 +678,8 @@ class _CheckoutPageState extends State<CheckoutPage>
               SizedBox(
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: () => _applyVoucher(_voucherCodeController.text),
+                  onPressed: () =>
+                      _applyVoucher(_voucherCodeController.text),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary.withOpacity(0.1),
                     foregroundColor: AppColors.primary,
@@ -728,7 +690,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                   ),
                   child: const Text(
                     'Áp dụng',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold,color: AppColors.primary),
                   ),
                 ),
               )
@@ -736,80 +698,51 @@ class _CheckoutPageState extends State<CheckoutPage>
           ),
           const SizedBox(height: 12),
           InkWell(
-            onTap: _showVoucherPopup, // Gọi hàm popup
+            onTap: _showVoucherPopup,
             borderRadius: BorderRadius.circular(8),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-// ... (existing code) ...
-            ),
-          ),
-          // Voucher
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: figmaBgColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.local_offer_outlined,
-                    color: AppColors.primary, size: 20),
-                const SizedBox(width: 8),
-                const Text(
-                  'Voucher có sẵn',
-                  style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary),
-                ),
-                const Spacer(),
-                const Icon(Icons.arrow_forward_ios,
-                    size: 16, color: AppColors.textSecondary),
-              ],
+              padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: figmaBgColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.local_offer_outlined,
+                      color: AppColors.primary, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Voucher có sẵn',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.arrow_forward_ios,
+                      size: 16, color: AppColors.textSecondary),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 16),
-          // Chi tiết giá
           _buildPriceDetailRow(
               'Số lượng sản phẩm:', '${widget.itemsToCheckout.length}'),
-          _buildPriceDetailRow(
-              'Tổng tiền hàng:', _formatPrice(subtotal)),
+          _buildPriceDetailRow('Tổng tiền hàng:', _formatPrice(subtotal)),
           _buildPriceDetailRow(
               'Phí vận chuyển:',
               shippingFee == 0.0 ? "Miễn phí" : _formatPrice(shippingFee),
               color: shippingFee == 0.0 ? const Color(0xFF2E7D32) : null),
-          _buildPriceDetailRow('Giảm giá:', '-${_formatPrice(totalSaving)}', // <-- Lỗi của bạn nằm ở đây
+          _buildPriceDetailRow('Giảm giá:', '-${_formatPrice(totalSaving)}',
               color: const Color(0xFF2E7D32)),
           _buildPriceDetailRow(
-              'Mã giảm giá:', '-${_formatPrice(voucherDiscount)}', // Dùng voucherDiscount (đã được truyền vào)
+              'Mã giảm giá:', '-${_formatPrice(voucherDiscount)}',
               color: const Color(0xFF2E7D32)),
         ],
       ),
     );
   }
 
-  // Widget con cho hàng chi tiết giá
-  Widget _buildPriceDetailRow(String title, String value, {Color? color}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(title,
-              style: const TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: color ?? AppColors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 3. Phương thức thanh toán
   Widget _buildPaymentMethodSection() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -839,27 +772,23 @@ class _CheckoutPageState extends State<CheckoutPage>
           _buildPaymentOption(
             title: 'Thanh toán khi nhận hàng',
             icon: Icons.local_shipping_outlined,
-            value: 0,
+            value: PaymentMethod.cod,
           ),
           _buildPaymentOption(
             title: 'Quét mã QR chuyển khoản',
             icon: Icons.qr_code_2_outlined,
-            value: 1, // Giá trị này khớp với _selectedPaymentMethod
-          ),
-          _buildPaymentOption(
-            title: 'Momo',
-            icon: Icons.payment_outlined, // Icon demo, bạn có thể dùng ảnh
-            value: 2,
+            value: PaymentMethod.qr,
           ),
         ],
       ),
     );
   }
 
-  // Widget con cho 1 lựa chọn thanh toán
   Widget _buildPaymentOption(
-      {required String title, required IconData icon, required int value}) {
-    return RadioListTile<int>(
+      {required String title,
+        required IconData icon,
+        required PaymentMethod value}) {
+    return RadioListTile<PaymentMethod>(
       value: value,
       groupValue: _selectedPaymentMethod,
       onChanged: (val) {
@@ -878,7 +807,6 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // 4. Thông tin người nhận
   Widget _buildReceiverInfoSection(String fullAddress, String notes) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -907,14 +835,14 @@ class _CheckoutPageState extends State<CheckoutPage>
           const SizedBox(height: 16),
           _buildReceiverInfoRow('Họ và tên:', _userName),
           _buildReceiverInfoRow('Số điện thoại:', _userPhone),
-          _buildReceiverInfoRow('Nhận hàng tại:', fullAddress, isAddress: true),
+          _buildReceiverInfoRow('Nhận hàng tại:', fullAddress,
+              isAddress: true),
           _buildReceiverInfoRow('Ghi chú:', notes),
         ],
       ),
     );
   }
 
-  // Widget con cho 1 hàng thông tin người nhận
   Widget _buildReceiverInfoRow(String title, String value,
       {bool isAddress = false}) {
     return Padding(
@@ -923,10 +851,11 @@ class _CheckoutPageState extends State<CheckoutPage>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 100, // Đặt chiều rộng cố định cho tiêu đề
+            width: 100,
             child: Text(
               title,
-              style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              style: const TextStyle(
+                  fontSize: 14, color: AppColors.textSecondary),
             ),
           ),
           const SizedBox(width: 8),
@@ -937,7 +866,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
-                height: isAddress ? 1.5 : 1.2, // Tăng chiều cao dòng cho địa chỉ
+                height: isAddress ? 1.5 : 1.2,
               ),
             ),
           ),
@@ -946,14 +875,14 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // 5. Điều khoản
   Widget _buildTermsSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
       child: Text.rich(
         TextSpan(
           text: 'Bằng việc nhấn nút "Thanh toán", bạn đồng ý với ',
-          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          style: const TextStyle(
+              fontSize: 13, color: AppColors.textSecondary),
           children: [
             TextSpan(
               text: 'Điều khoản sử dụng',
@@ -963,7 +892,6 @@ class _CheckoutPageState extends State<CheckoutPage>
                 fontWeight: FontWeight.w600,
                 decoration: TextDecoration.underline,
               ),
-              // Thêm recognizer để nhấn vào sau
             ),
             const TextSpan(text: ' của chúng tôi.'),
           ],
@@ -973,8 +901,8 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // --- FOOTER CỦA TAB 2 (THANH TOÁN) ---
-  Widget _buildPaymentTabFooter(double finalTotal, double totalSaving) {
+  Widget _buildPaymentFooter(double finalTotal) {
+    final saving = _calculateTotalSaving();
     return Container(
       padding: EdgeInsets.fromLTRB(
           16, 16, 16, 16 + MediaQuery.of(context).padding.bottom),
@@ -991,7 +919,6 @@ class _CheckoutPageState extends State<CheckoutPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Tổng tiền & Tiết kiệm
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -1001,11 +928,11 @@ class _CheckoutPageState extends State<CheckoutPage>
                   style: TextStyle(fontSize: 14, color: figmaGreyText),
                   children: [
                     TextSpan(
-                      text: _formatPrice(totalSaving),
+                      text: _formatPrice(saving),
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF2E7D32), // Xanh lá
+                        color: Color(0xFF2E7D32), // Màu xanh lá
                       ),
                     ),
                   ],
@@ -1021,7 +948,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: figmaRedPrice, // Đỏ
+                        color: AppColors.primary,
                       ),
                     ),
                   ],
@@ -1030,21 +957,35 @@ class _CheckoutPageState extends State<CheckoutPage>
             ],
           ),
           const SizedBox(height: 16),
-          // Nút "Thanh toán" (Cuối cùng)
           SizedBox(
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
               onPressed: () {
-                // Xử lý logic thanh toán cuối cùng
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Đặt hàng thành công! (Demo)'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                // Quay về trang chủ
-                Navigator.of(context).popUntil((route) => route.isFirst);
+                // Kiểm tra phương thức thanh toán
+                if (_selectedPaymentMethod == PaymentMethod.qr) {
+                  // 1. Tạo mã giao dịch ngẫu nhiên (6 chữ + 3 số)
+                  String randomContent =
+                      '${randomAlpha(6).toUpperCase()}${randomNumeric(3)}';
+
+                  // 2. Chuyển sang trang QR
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => QRPaymentPage(
+                        finalTotalAmount: finalTotal,
+                        transactionContent: randomContent,
+                      ),
+                    ),
+                  );
+                } else {
+                  // Logic cho COD (Thanh toán khi nhận hàng)
+                  // Chuyển thẳng sang màn hình thanh toán thành công
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => const PaymentSuccessPage(),
+                    ),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
@@ -1067,7 +1008,7 @@ class _CheckoutPageState extends State<CheckoutPage>
     );
   }
 
-  // --- CÁC WIDGET CON (Giữ nguyên) ---
+  // --- CÁC WIDGET CON (COMMON) ---
   Widget _buildProductListSection() {
     return Column(
       children: widget.itemsToCheckout
@@ -1085,7 +1026,7 @@ class _CheckoutPageState extends State<CheckoutPage>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3), // Shadow cam
+            color: AppColors.primary.withOpacity(0.3),
             blurRadius: 12,
             spreadRadius: 1,
             offset: const Offset(0, 4),
@@ -1210,7 +1151,8 @@ class _CheckoutPageState extends State<CheckoutPage>
           const SizedBox(height: 12),
           Row(
             children: [
-              if (_isStudent) _buildUserBadge("Student", const Color(0xFF2E7D32)),
+              if (_isStudent)
+                _buildUserBadge("Student", const Color(0xFF2E7D32)),
               if (_isMember) const SizedBox(width: 8),
               if (_isMember) _buildUserBadge("Member", AppColors.primary),
             ],
@@ -1314,7 +1256,8 @@ class _CheckoutPageState extends State<CheckoutPage>
             items: items.map((T item) {
               return DropdownMenuItem<T>(
                 value: item,
-                child: Text(getItemName(item), overflow: TextOverflow.ellipsis),
+                child: Text(getItemName(item),
+                    overflow: TextOverflow.ellipsis),
               );
             }).toList(),
           ),
@@ -1364,6 +1307,28 @@ class _CheckoutPageState extends State<CheckoutPage>
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide(color: AppColors.primary, width: 2),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceDetailRow(String title, String value, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 14, color: AppColors.textSecondary)),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: color ?? AppColors.textPrimary,
             ),
           ),
         ],
