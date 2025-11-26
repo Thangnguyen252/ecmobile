@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/layouts/main_layout.dart';
+//import 'package:ecmobile/utils/seed_cart_from_products.dart';
 //import 'package:ecmobile/utils/seed_cart_data.dart'; // 2. Import file chứa hàm seed
 // 1. IMPORT FILE MỚI
 //import 'package:ecmobile/utils/seed_customer.dart';
@@ -27,7 +28,7 @@ void main() async {
   // Bỏ comment dòng dưới đây để chạy script.
   // Sau khi chạy xong lần đầu tiên và thấy thông báo thành công trên Console,
   // hãy comment lại dòng này để không nạp lại dữ liệu mỗi lần mở app.
-
+  //await seedCartFromRealProducts();
   //await seedInitialCart();
   runApp(const MyApp());
 }

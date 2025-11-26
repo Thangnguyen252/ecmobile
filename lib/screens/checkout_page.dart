@@ -8,7 +8,8 @@ import 'package:ecmobile/models/address_model.dart'; // Model địa chỉ
 import 'package:random_string/random_string.dart'; // Để tạo mã ngẫu nhiên
 import 'package:ecmobile/screens/qr_payment_page.dart'; // Màn hình QR
 import 'package:ecmobile/screens/payment_success_page.dart'; // --- THÊM IMPORT NÀY ---
-
+import 'package:cloud_firestore/cloud_firestore.dart'; // Để dùng Timestamp
+import 'package:ecmobile/services/order_service.dart'; // Service vừa tạo
 // Định nghĩa các phương thức thanh toán
 enum PaymentMethod { qr, cod }
 
@@ -38,7 +39,7 @@ class _CheckoutPageState extends State<CheckoutPage>
     with SingleTickerProviderStateMixin {
   // Controller để điều khiển TabBar
   late TabController _tabController;
-
+  final OrderService _orderService = OrderService(); // Instance của Service
   // --- Dữ liệu giả (PLACEHOLDER) cho thông tin người dùng ---
   String _userName = "Nguyễn Quang Thắng";
   String _userPhone = "0772983376";
@@ -961,30 +962,54 @@ class _CheckoutPageState extends State<CheckoutPage>
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
-              onPressed: () {
-                // Kiểm tra phương thức thanh toán
-                if (_selectedPaymentMethod == PaymentMethod.qr) {
-                  // 1. Tạo mã giao dịch ngẫu nhiên (6 chữ + 3 số)
-                  String randomContent =
-                      '${randomAlpha(6).toUpperCase()}${randomNumeric(3)}';
+              onPressed: () async {
+                // 1. Chuẩn bị dữ liệu Đơn hàng (Common Data)
+                String orderId = 'ORDER-${randomAlphaNumeric(7).toUpperCase()}';
 
-                  // 2. Chuyển sang trang QR
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => QRPaymentPage(
-                        finalTotalAmount: finalTotal,
-                        transactionContent: randomContent,
-                      ),
-                    ),
-                  );
+                // Chuyển đổi danh sách sản phẩm thành Map để lưu vào Firebase
+                List<Map<String, dynamic>> itemsMap = widget.itemsToCheckout.map((item) => {
+                  'productName': item.productName,
+                  'quantity': item.quantity,
+                  'price': item.currentPrice,
+                  'image': item.productImage, // Có thể thêm ảnh nếu muốn
+                }).toList();
+
+                Map<String, dynamic> orderData = {
+                  'orderId': orderId,
+                  'userId': "user_thangvh2004", // ID cứng hoặc lấy từ Auth
+                  'customerName': _userName,
+                  'email': _userEmail,
+                  'shippingAddress': _getFullAddress(),
+                  'items': itemsMap,
+                  'totalAmount': finalTotal,
+                  'createdAt': Timestamp.now(),
+                };
+
+                if (_selectedPaymentMethod == PaymentMethod.qr) {
+                  // --- LOGIC QR ---
+                  // Cập nhật thêm info cho QR
+                  orderData['paymentMethod'] = 2; // 2 = QR/Online
+                  orderData['status'] = "Đã thanh toán"; // Dự kiến status sau khi quét xong
+
+                  String qrContent = '${randomAlpha(6).toUpperCase()}${randomNumeric(3)}';
+
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => QRPaymentPage(
+                    finalTotalAmount: finalTotal,
+                    transactionContent: qrContent,
+                    orderInfo: orderData, // TRUYỀN DỮ LIỆU ĐƠN HÀNG SANG TRANG QR
+                  )));
+
                 } else {
-                  // Logic cho COD (Thanh toán khi nhận hàng)
-                  // Chuyển thẳng sang màn hình thanh toán thành công
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => const PaymentSuccessPage(),
-                    ),
-                  );
+                  // --- LOGIC COD ---
+                  // Tạo order ngay lập tức với status "Chờ xác nhận"
+                  orderData['paymentMethod'] = 1; // 1 = COD
+                  orderData['status'] = "Chờ xác nhận";
+
+                  // Gọi Service tạo đơn
+                  await _orderService.createOrder(orderData);
+
+                  // Chuyển màn hình thành công
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const PaymentSuccessPage()));
                 }
               },
               style: ElevatedButton.styleFrom(

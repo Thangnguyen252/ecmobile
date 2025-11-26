@@ -21,7 +21,7 @@ Future<void> seedInitialCart() async {
     productId: 'iphone_17_pro_max',
     productName: 'iPhone 17 Pro Max 256GB - Titan Tự Nhiên',
     // Sử dụng link ảnh thật từ seed_data.dart hoặc link mẫu
-    productImage: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-15-pro-max_1.png',
+    productImage: 'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-17-pro-256-gb.png',
     currentPrice: 34990000,
     originalPrice: 38990000,
     quantity: 1,

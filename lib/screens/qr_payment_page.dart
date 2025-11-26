@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io'; // Thêm thư viện này để xử lý HttpOverrides
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -7,15 +8,29 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/screens/payment_success_page.dart';
 import 'package:intl/intl.dart';
+import 'package:ecmobile/services/order_service.dart'; // Import OrderService
+
+// --- CLASS ĐỂ BỎ QUA LỖI SSL (Dùng cho máy ảo bị lỗi chứng chỉ) ---
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
+// ------------------------------------------------------------------
 
 class QRPaymentPage extends StatefulWidget {
   final double finalTotalAmount;
-  final String transactionContent; // Mã giao dịch
+  final String transactionContent;
+  final Map<String, dynamic> orderInfo;
 
   const QRPaymentPage({
     Key? key,
     required this.finalTotalAmount,
     required this.transactionContent,
+    required this.orderInfo,
   }) : super(key: key);
 
   @override
@@ -23,23 +38,20 @@ class QRPaymentPage extends StatefulWidget {
 }
 
 class _QRPaymentPageState extends State<QRPaymentPage> {
-  // --- THÔNG TIN NGÂN HÀNG (VIETQR) ---
-  final String bankBin = "970422"; // BIN của MB Bank
+  final String bankBin = "970422";
   final String accountNumber = "0772983376";
   final String accountName = "NGUYEN QUANG THANG";
 
-  // --- LƯU Ý: Thay URL này bằng URL mới nếu bạn vừa Deploy lại ---
+  // URL App Script (Đảm bảo đã deploy as 'Anyone')
   final String appScriptUrl =
-      "https://script.google.com/macros/s/AKfycby6hQmom2jrU0rdKYb_6V1c7sxtDV1BC9-vbqEBt68BHerz_aqlhzi9PUug5Rzh-YgMTg/exec";
+      "https://script.google.com/macros/s/AKfycbwJjzhksgu-6oxdFVsXBXaboHazdwusCHSDGzGdpgvNGqDA_PJTHQK1OwX094t5kK1aBg/exec";
 
-  // --- QUẢN LÝ TRẠNG THÁI ---
   Timer? _paymentCheckTimer;
   String _qrImageUrl = "";
   bool _isChecking = true;
   String _checkingStatusText = "Đang kết nối máy chủ...";
-
-  // Biến lưu số dòng ban đầu của Sheet để so sánh
   int _initialRowCount = -1;
+  final OrderService _orderService = OrderService();
 
   String _formatPrice(double price) {
     final format = NumberFormat.currency(
@@ -53,10 +65,12 @@ class _QRPaymentPageState extends State<QRPaymentPage> {
   @override
   void initState() {
     super.initState();
+    // --- ÁP DỤNG HTTP OVERRIDES ---
+    HttpOverrides.global = MyHttpOverrides();
+    // ------------------------------
+
     _generateVietQR();
-    // Gọi ngay lập tức để lấy số dòng ban đầu
     _checkPaymentStatus();
-    // Sau đó lặp lại mỗi 20s
     _startPaymentCheckLoop();
   }
 
@@ -83,42 +97,47 @@ class _QRPaymentPageState extends State<QRPaymentPage> {
     });
   }
 
-  // --- LOGIC KIỂM TRA MỚI: DỰA VÀO SỐ DÒNG ---
   Future<void> _checkPaymentStatus() async {
-    // Không set state loading ở đây để tránh nhấp nháy giao diện khi auto-check
+    // Không set state loading ở đây để tránh nhấp nháy
     try {
+      print("Đang gọi API Sheet: $appScriptUrl"); // Log debug
+
       final response = await http.get(Uri.parse(appScriptUrl));
 
+      print("API Response Code: ${response.statusCode}"); // Log debug
+
       if (response.statusCode == 200) {
-        // Kiểm tra xem có phải trả về trang Login HTML không (Lỗi phổ biến)
         if (response.body.trim().startsWith("<!DOCTYPE html>")) {
+          print("Lỗi HTML trả về: ${response.body}"); // Log lỗi chi tiết
           setState(() {
-            _checkingStatusText = "Lỗi quyền truy cập Sheet. Vui lòng Deploy lại as 'Anyone'.";
+            _checkingStatusText =
+            "Lỗi quyền truy cập Sheet. Vui lòng Deploy lại as 'Anyone'.";
           });
           return;
         }
 
         final result = json.decode(response.body);
-        // Lấy tổng số dòng hiện tại từ API
+        print("Dữ liệu JSON: $result"); // Log dữ liệu nhận được
+
         int currentTotalRows = result['totalRows'] ?? 0;
 
         if (_initialRowCount == -1) {
-          // --- LẦN ĐẦU TIÊN CHẠY ---
-          // Lưu lại mốc số dòng ban đầu (ví dụ: 10 dòng)
           _initialRowCount = currentTotalRows;
+          print("Số dòng ban đầu: $_initialRowCount");
           setState(() {
             _checkingStatusText = "Hệ thống đang chờ giao dịch mới...";
           });
         } else {
-          // --- CÁC LẦN SAU ---
-          // Nếu số dòng hiện tại > số dòng ban đầu (ví dụ: 11 > 10)
-          // Nghĩa là có giao dịch mới được thêm vào
+          print("Số dòng hiện tại: $currentTotalRows (Ban đầu: $_initialRowCount)");
           if (currentTotalRows > _initialRowCount) {
+            // --- THANH TOÁN THÀNH CÔNG ---
             _paymentCheckTimer?.cancel();
             setState(() {
               _isChecking = false;
-              _checkingStatusText = "Thanh toán thành công!";
+              _checkingStatusText = "Thanh toán thành công! Đang tạo đơn hàng...";
             });
+
+            await _orderService.createOrder(widget.orderInfo);
 
             Future.delayed(const Duration(seconds: 1), () {
               if (mounted) {
@@ -130,7 +149,6 @@ class _QRPaymentPageState extends State<QRPaymentPage> {
               }
             });
           } else {
-            // Chưa có dòng mới
             setState(() {
               _checkingStatusText = "Chưa nhận được giao dịch mới. Đang chờ...";
             });
@@ -138,14 +156,15 @@ class _QRPaymentPageState extends State<QRPaymentPage> {
         }
       } else {
         setState(() {
-          _checkingStatusText = "Lỗi kết nối API (${response.statusCode}). Thử lại sau 20s...";
+          _checkingStatusText =
+          "Lỗi kết nối API (${response.statusCode}). Thử lại sau 20s...";
         });
       }
     } catch (e) {
+      print("EXCEPTION GỌI API: $e"); // Log lỗi exception
       setState(() {
-        _checkingStatusText = "Lỗi: Không thể kết nối tới Sheet. Thử lại sau 20s...";
+        _checkingStatusText = "Lỗi: Không thể kết nối tới Sheet ($e).";
       });
-      print("API Error: $e");
     }
   }
 
@@ -166,8 +185,9 @@ class _QRPaymentPageState extends State<QRPaymentPage> {
       backgroundColor: const Color(0xFFF1F1F1),
       appBar: AppBar(
         backgroundColor: AppColors.primary,
+        centerTitle: true,
         title: const Text('Quét mã QR chuyển khoản',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18, )),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
@@ -190,7 +210,7 @@ class _QRPaymentPageState extends State<QRPaymentPage> {
     );
   }
 
-  // --- CÁC WIDGET CON ---
+  // --- CÁC WIDGET CON GIỮ NGUYÊN ---
   Widget _buildQRSection() {
     return Container(
       width: double.infinity,
@@ -295,7 +315,7 @@ class _QRPaymentPageState extends State<QRPaymentPage> {
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color:
-                        isAmount ? AppColors.red : AppColors.textPrimary,
+                        isAmount ? AppColors.primary : AppColors.textPrimary,
                       ),
                     ),
                   ),

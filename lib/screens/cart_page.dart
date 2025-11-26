@@ -4,7 +4,6 @@ import 'package:ecmobile/models/cart_item_model.dart';
 import 'package:ecmobile/services/cart_service.dart'; // Import Service
 import 'package:ecmobile/screens/checkout_page.dart';
 import 'package:intl/intl.dart';
-// import 'package:ecmobile/utils/seed_cart_data.dart'; // Bỏ comment dòng này nếu muốn chạy nút nạp dữ liệu
 
 class CartPage extends StatefulWidget {
   const CartPage({Key? key}) : super(key: key);
@@ -39,20 +38,16 @@ class _CartPageState extends State<CartPage> {
       body: StreamBuilder<List<CartItemModel>>(
         stream: _cartService.getCartStream(),
         builder: (context, snapshot) {
-          // 1. Trạng thái đang tải
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // 2. Trạng thái lỗi
           if (snapshot.hasError) {
             return Center(child: Text('Lỗi: ${snapshot.error}'));
           }
 
-          // 3. Lấy dữ liệu
           final cartItems = snapshot.data ?? [];
 
-          // 4. Trạng thái giỏ hàng trống
           if (cartItems.isEmpty) {
             return Center(
               child: Column(
@@ -63,22 +58,11 @@ class _CartPageState extends State<CartPage> {
                   const SizedBox(height: 16),
                   const Text('Giỏ hàng của bạn trống',
                       style: TextStyle(fontSize: 18, color: Colors.grey)),
-                  const SizedBox(height: 20),
-                  // Nút test để nạp dữ liệu mẫu (Bật lên nếu cần test)
-                  /*
-                  ElevatedButton(
-                    onPressed: () async {
-                      await seedInitialCart();
-                    },
-                    child: const Text("Nạp dữ liệu mẫu (iPhone & Dell)"),
-                  )
-                  */
                 ],
               ),
             );
           }
 
-          // 5. Hiển thị danh sách
           return Column(
             children: [
               Expanded(
@@ -123,8 +107,26 @@ class _CartPageState extends State<CartPage> {
 
   // --- Item Card ---
   Widget _buildCartItemCard(CartItemModel item, Color figmaBlue, Color figmaPriceRed) {
-    // Kiểm tra ảnh online hay offline
     final isAsset = !item.productImage.startsWith('http');
+
+    // --- TẠO DANH SÁCH KHUYẾN MÃI MẶC ĐỊNH ---
+    // Thay vì lấy từ item.promos (Firebase), ta tạo cứng danh sách này tại đây
+    // để đảm bảo mọi sản phẩm đều hiển thị giống nhau.
+    final List<PromoInfo> defaultPromos = [
+      // 1. Khối Bảo hành
+      PromoInfo(text: 'Bảo hành chính hãng 12 tháng', type: PromoType.warranty),
+
+      // 2. Khối Khuyến mãi đặc biệt (như yêu cầu)
+      PromoInfo(
+        text: 'Khuyến mãi đặc biệt! 🎁',
+        type: PromoType.member,
+        subPromos: [
+          'Giảm thêm 10% khi mua phụ kiện (Sạc, cáp, ốp lưng,...)',
+          'Tặng gói phần mềm tin học văn phòng miễn phí trọn đời.'
+        ],
+      ),
+    ];
+    // -------------------------------------------
 
     return Card(
       color: AppColors.white,
@@ -140,7 +142,7 @@ class _CartPageState extends State<CartPage> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Checkbox (Gọi Service để update)
+                // Checkbox
                 Padding(
                   padding: const EdgeInsets.only(top: 16),
                   child: Checkbox(
@@ -257,11 +259,13 @@ class _CartPageState extends State<CartPage> {
               ],
             ),
             const SizedBox(height: 12),
-            // Danh sách khuyến mãi
+
+            // --- SỬ DỤNG DANH SÁCH KHUYẾN MÃI MẶC ĐỊNH ---
             Column(
               children:
-              item.promos.map((promo) => _buildPromoBlock(promo)).toList(),
+              defaultPromos.map((promo) => _buildPromoBlock(promo)).toList(),
             ),
+            // ---------------------------------------------
           ],
         ),
       ),
@@ -517,7 +521,6 @@ class _CartPageState extends State<CartPage> {
                 child: ElevatedButton(
                   onPressed: totalPrice > 0
                       ? () {
-                    // Lọc item đã chọn để chuyển trang
                     final selectedItems = cartItems.where((i) => i.isSelected).toList();
                     Navigator.push(
                       context,
