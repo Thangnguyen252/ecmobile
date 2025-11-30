@@ -3,6 +3,8 @@ import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/screens/home_page.dart';
 import 'package:ecmobile/screens/cart_page.dart';
 import 'package:ecmobile/widgets/custom_search_app_bar.dart';
+// --- THÊM IMPORT TRANG TÀI KHOẢN ---
+import 'package:ecmobile/screens/account_page.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({Key? key}) : super(key: key);
@@ -26,7 +28,7 @@ class _MainLayoutState extends State<MainLayout> {
     const Center(child: Text('Trang Danh mục')),
     const Center(child: Text('Trang Đơn hàng')),
     const Center(child: Text('Trang AI Hỗ trợ')),
-    const Center(child: Text('Trang Tài khoản')),
+    const AccountPage(), // Thay Text bằng AccountPage
   ];
 
   @override
