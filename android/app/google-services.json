@@ -21,6 +21,10 @@
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": []
+        },
+        "recaptcha_service": {
+          "status": 2,
+          "site_key": "6Lf9-BwsAAAAAC1GMyLPBSk3pqqZtHFN-kf1HD5s"
         }
       }
     }
