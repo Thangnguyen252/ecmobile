@@ -12,8 +12,8 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final TextEditingController _emailController = TextEditingController(); // Đổi từ Phone -> Email
-  final TextEditingController _phoneController = TextEditingController(); // Vẫn giữ để nhập thông tin
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPassController = TextEditingController();
@@ -70,13 +70,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = false);
 
     if (isSent) {
-      // 4. Chuyển sang màn hình OTP (Mang theo OTP để so sánh)
+      // 4. Chuyển sang màn hình OTP
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => OtpVerifyScreen(
             email: email,
-            generatedOTP: otp, // Truyền mã vừa tạo sang để check
+            generatedOTP: otp,
             userData: {
               "fullName": name,
               "email": email,
@@ -114,15 +114,55 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-            _buildTextField(controller: _emailController, label: 'Email', hint: 'Nhập địa chỉ Email (Gmail)', icon: Icons.email),
+
+            // --- Sử dụng Widget mới có hiệu ứng Zoom ---
+
+            ScaleTextField(
+              controller: _emailController,
+              label: 'Email',
+              hint: 'Nhập địa chỉ Email (Gmail)',
+              icon: Icons.email,
+              keyboardType: TextInputType.emailAddress,
+            ),
             const SizedBox(height: 16),
-            _buildTextField(controller: _phoneController, label: 'Số điện thoại', hint: 'Nhập SĐT liên hệ', icon: Icons.phone, isNumber: true),
+
+            ScaleTextField(
+              controller: _phoneController,
+              label: 'Số điện thoại',
+              hint: 'Nhập SĐT liên hệ',
+              icon: Icons.phone,
+              keyboardType: TextInputType.phone,
+            ),
             const SizedBox(height: 16),
-            _buildTextField(controller: _nameController, label: 'Họ và tên', hint: 'Nhập họ tên', icon: Icons.person),
+
+            ScaleTextField(
+              controller: _nameController,
+              label: 'Họ và tên',
+              hint: 'Nhập họ tên',
+              icon: Icons.person,
+            ),
             const SizedBox(height: 16),
-            _buildPassField(controller: _passwordController, label: 'Mật khẩu', isObscured: _isPasswordObscured, toggle: () => setState(() => _isPasswordObscured = !_isPasswordObscured)),
+
+            ScaleTextField(
+              controller: _passwordController,
+              label: 'Mật khẩu',
+              hint: 'Tạo mật khẩu',
+              icon: Icons.lock,
+              isPassword: true,
+              isObscured: _isPasswordObscured,
+              onToggle: () => setState(() => _isPasswordObscured = !_isPasswordObscured),
+            ),
             const SizedBox(height: 16),
-            _buildPassField(controller: _confirmPassController, label: 'Xác nhận mật khẩu', isObscured: _isConfirmPasswordObscured, toggle: () => setState(() => _isConfirmPasswordObscured = !_isConfirmPasswordObscured)),
+
+            ScaleTextField(
+              controller: _confirmPassController,
+              label: 'Xác nhận mật khẩu',
+              hint: 'Nhập lại mật khẩu',
+              icon: Icons.lock,
+              isPassword: true,
+              isObscured: _isConfirmPasswordObscured,
+              onToggle: () => setState(() => _isConfirmPasswordObscured = !_isConfirmPasswordObscured),
+            ),
             const SizedBox(height: 30),
 
             SizedBox(
@@ -144,36 +184,107 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+}
 
-  Widget _buildTextField({required TextEditingController controller, required String label, required String hint, required IconData icon, bool isNumber = false}) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('$label *', style: const TextStyle(fontWeight: FontWeight.bold)),
-      const SizedBox(height: 8),
-      TextField(
-        controller: controller,
-        keyboardType: isNumber ? TextInputType.phone : TextInputType.emailAddress,
-        decoration: InputDecoration(
-          hintText: hint, filled: true, fillColor: Colors.white,
-          prefixIcon: Icon(icon, color: Colors.grey),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      )
-    ]);
+// --- Widget Text Field có hiệu ứng phóng to (Scale) ---
+class ScaleTextField extends StatefulWidget {
+  final TextEditingController controller;
+  final String label;
+  final String hint;
+  final IconData icon;
+  final bool isPassword;
+  final bool isObscured;
+  final VoidCallback? onToggle;
+  final TextInputType keyboardType;
+
+  const ScaleTextField({
+    super.key,
+    required this.controller,
+    required this.label,
+    required this.hint,
+    required this.icon,
+    this.isPassword = false,
+    this.isObscured = false,
+    this.onToggle,
+    this.keyboardType = TextInputType.text,
+  });
+
+  @override
+  State<ScaleTextField> createState() => _ScaleTextFieldState();
+}
+
+class _ScaleTextFieldState extends State<ScaleTextField> {
+  // FocusNode để lắng nghe trạng thái tiêu điểm
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusChange);
   }
 
-  Widget _buildPassField({required TextEditingController controller, required String label, required bool isObscured, required VoidCallback toggle}) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('$label *', style: const TextStyle(fontWeight: FontWeight.bold)),
-      const SizedBox(height: 8),
-      TextField(
-        controller: controller, obscureText: isObscured,
-        decoration: InputDecoration(
-          filled: true, fillColor: Colors.white,
-          prefixIcon: const Icon(Icons.lock, color: Colors.grey),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          suffixIcon: IconButton(icon: Icon(isObscured ? Icons.visibility_off : Icons.visibility), onPressed: toggle),
+  void _onFocusChange() {
+    setState(() {
+      _isFocused = _focusNode.hasFocus;
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${widget.label} *',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-      )
-    ]);
+        const SizedBox(height: 8),
+        // Widget tạo hiệu ứng phóng to
+        AnimatedScale(
+          scale: _isFocused ? 1.05 : 1.0, // Phóng to 1.05 lần khi focus
+          duration: const Duration(milliseconds: 200), // Thời gian hiệu ứng 0.2s
+          curve: Curves.easeInOut, // Hiệu ứng mượt mà
+          child: TextField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            keyboardType: widget.keyboardType,
+            obscureText: widget.isObscured,
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              filled: true,
+              fillColor: Colors.white,
+              prefixIcon: Icon(widget.icon, color: _isFocused ? const Color(0xFFFF6B21) : Colors.grey),
+              // Đổi màu viền khi focus để đẹp hơn
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFFF6B21), width: 2),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              suffixIcon: widget.isPassword
+                  ? IconButton(
+                icon: Icon(
+                  widget.isObscured ? Icons.visibility_off : Icons.visibility,
+                  color: Colors.grey,
+                ),
+                onPressed: widget.onToggle,
+              )
+                  : null,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

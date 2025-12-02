@@ -12,7 +12,20 @@
           "package_name": "com.example.ecmobile"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "771277167632-qjik10voq64l1g6n0b1aukeda5omoito.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.ecmobile",
+            "certificate_hash": "3122a3637795fa6062b487319a6a9d034fd0b1b8"
+          }
+        },
+        {
+          "client_id": "771277167632-kim7f2muks4ablsjidb0ehjfpj0sd5m7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAq6ASlb3xQZcUUUt-HkXqXHovXKqcoqdA"
@@ -20,11 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
-        },
-        "recaptcha_service": {
-          "status": 2,
-          "site_key": "6Lf9-BwsAAAAAC1GMyLPBSk3pqqZtHFN-kf1HD5s"
+          "other_platform_oauth_client": [
+            {
+              "client_id": "771277167632-kim7f2muks4ablsjidb0ehjfpj0sd5m7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "771277167632-m80n4b5imcs74gubrnrdhk17fuhgnllq.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.ecmobile"
+              }
+            }
+          ]
         }
       }
     }

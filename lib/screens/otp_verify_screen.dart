@@ -1,13 +1,15 @@
 // lib/screens/otp_verify_screen.dart
 
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:ecmobile/screens/register_success_screen.dart';
+import 'package:ecmobile/services/email_auth_service.dart';
 
 class OtpVerifyScreen extends StatefulWidget {
   final String email;
-  final String generatedOTP; // Mã đúng do hệ thống tạo
+  final String generatedOTP;
   final Map<String, dynamic> userData;
 
   const OtpVerifyScreen({
@@ -27,11 +29,74 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
   bool _isLoading = false;
 
+  late String _currentOTP;
+  Timer? _timer;
+  int _start = 60;
+  bool _canResend = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentOTP = widget.generatedOTP;
+    _startTimer();
+  }
+
   @override
   void dispose() {
+    _timer?.cancel();
     for (var c in _controllers) c.dispose();
     for (var f in _focusNodes) f.dispose();
     super.dispose();
+  }
+
+  void _startTimer() {
+    setState(() {
+      _start = 60;
+      _canResend = false;
+    });
+    const oneSec = Duration(seconds: 1);
+    _timer = Timer.periodic(oneSec, (Timer timer) {
+      if (_start == 0) {
+        setState(() {
+          timer.cancel();
+          _canResend = true;
+        });
+      } else {
+        setState(() {
+          _start--;
+        });
+      }
+    });
+  }
+
+  Future<void> _handleResendOtp() async {
+    if (!_canResend) return;
+
+    setState(() => _isLoading = true);
+
+    String newOtp = EmailAuthService.generateOTP();
+
+    bool isSent = await EmailAuthService.sendOTP(
+      name: widget.userData['fullName'],
+      email: widget.email,
+      otp: newOtp,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (isSent) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã gửi mã xác nhận mới vào Email!')),
+      );
+      setState(() {
+        _currentOTP = newOtp;
+      });
+      _startTimer();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gửi lại thất bại. Vui lòng thử lại sau.')),
+      );
+    }
   }
 
   String get _otpCode => _controllers.map((e) => e.text).join();
@@ -46,7 +111,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
     setState(() => _isLoading = true);
 
-    if (inputOtp == widget.generatedOTP) {
+    if (inputOtp == _currentOTP) {
       await _createFirebaseUser();
     } else {
       setState(() => _isLoading = false);
@@ -56,7 +121,6 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
   Future<void> _createFirebaseUser() async {
     try {
-      // 1. Tạo User Authentication
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: widget.email,
         password: widget.userData['password'],
@@ -65,40 +129,31 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
       if (userCredential.user != null) {
         String userId = userCredential.user!.uid;
 
-        // 2. Chuẩn bị dữ liệu Customer theo đúng mẫu bạn yêu cầu
-        // Lưu ý: customerCode giả lập ngẫu nhiên, thực tế có thể cần logic sinh mã từ server
         String randomCode = "KH${DateTime.now().millisecondsSinceEpoch.toString().substring(9)}";
 
         final customerData = {
-          "uid": userId, // ID từ Auth
+          "uid": userId,
           "fullName": widget.userData['fullName'] ?? "Chưa cập nhật",
-          "customerCode": randomCode, // VD: KH12345
-          "nickname": widget.userData['fullName'], // Mặc định lấy tên thật làm nickname
+          "customerCode": randomCode,
+          "nickname": widget.userData['fullName'],
           "email": widget.userData['email'],
           "phoneNumber": widget.userData['phoneNumber'] ?? "",
-          "gender": "Nam", // Mặc định, user có thể sửa sau
-          "address": "Hẻm 78 Tôn Thất Thuyết Phường 16 Quận 4", // Địa chỉ mẫu bạn yêu cầu
-
-          // Mật khẩu (Lưu ý bảo mật: tốt nhất không nên lưu plain text nếu không cần thiết)
+          "gender": "Nam",
+          "address": "Hẻm 78 Tôn Thất Thuyết Phường 16 Quận 4",
           "password": widget.userData['password'],
-
-          // Logic hạng thành viên & chi tiêu khởi tạo
-          "membershipRank": "Đồng", // Mới tạo thì nên là Đồng (hoặc Kim cương nếu bạn muốn hard-code test)
-          "isStudent": false, // Mặc định false
-          "studentRequestStatus": "pending", // Trạng thái yêu cầu HSSV
-          "totalSpending": 0, // Chi tiêu ban đầu = 0
-          "purchasedOrderCount": 0, // Số đơn hàng = 0
-
-          "createdAt": FieldValue.serverTimestamp(), // Thời gian tạo (Timestamp)
+          "membershipRank": "Đồng",
+          "isStudent": true,
+          "studentRequestStatus": "pending",
+          "totalSpending": 0,
+          "purchasedOrderCount": 0,
+          "createdAt": FieldValue.serverTimestamp(),
         };
 
-        // 3. Lưu vào Firestore - Collection 'customers'
         await FirebaseFirestore.instance
-            .collection('customers') // Đã sửa từ 'users' thành 'customers'
+            .collection('customers')
             .doc(userId)
             .set(customerData);
 
-        // 4. Thành công -> Chuyển màn hình
         if (mounted) {
           Navigator.pushAndRemoveUntil(
             context,
@@ -124,51 +179,105 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF3E9),
-      appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, leading: const BackButton(color: Colors.black)),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            const Text('Xác thực Email', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 10),
-            Text('Mã 6 số đã được gửi tới:', style: const TextStyle(color: Colors.grey)),
-            Text(widget.email, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 40),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              const Text('Xác thực', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(6, (index) => SizedBox(
-                width: 45, height: 50,
-                child: TextField(
-                  controller: _controllers[index],
-                  focusNode: _focusNodes[index],
-                  textAlign: TextAlign.center,
-                  keyboardType: TextInputType.number,
-                  maxLength: 1,
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  decoration: InputDecoration(
-                    counterText: "", filled: true, fillColor: Colors.white,
-                    contentPadding: EdgeInsets.zero,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  onChanged: (val) {
-                    if (val.isNotEmpty && index < 5) _focusNodes[index + 1].requestFocus();
-                    if (val.isEmpty && index > 0) _focusNodes[index - 1].requestFocus();
-                  },
-                ),
-              )),
-            ),
+              const SizedBox(height: 30),
 
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity, height: 50,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _verifyOtp,
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6B21)),
-                child: _isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Xác nhận', style: TextStyle(color: Colors.white, fontSize: 18)),
+              // Đã cập nhật đúng đường dẫn asset và xóa icon thừa
+              Image.asset(
+                'assets/images/verify.png',
+                height: 300,
+                fit: BoxFit.contain,
               ),
-            ),
-          ],
+
+              const SizedBox(height: 50),
+
+              Text('Mã 6 số đã được gửi tới:', style: const TextStyle(color: Colors.grey)),
+              const SizedBox(height: 5),
+              Text(widget.email, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+
+              const SizedBox(height: 30),
+
+              // 6 Ô nhập
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(6, (index) => SizedBox(
+                  width: 45, height: 50,
+                  child: TextField(
+                    controller: _controllers[index],
+                    focusNode: _focusNodes[index],
+                    textAlign: TextAlign.center,
+                    keyboardType: TextInputType.number,
+                    maxLength: 1,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      counterText: "", filled: true, fillColor: Colors.white,
+                      contentPadding: EdgeInsets.zero,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: Color(0xFFFF6B21), width: 2),
+                      ),
+                    ),
+                    onChanged: (val) {
+                      if (val.isNotEmpty && index < 5) _focusNodes[index + 1].requestFocus();
+                      if (val.isEmpty && index > 0) _focusNodes[index - 1].requestFocus();
+                    },
+                  ),
+                )),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Bộ đếm ngược gửi lại mã
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text("Chưa nhận được mã? ", style: TextStyle(color: Colors.grey)),
+                  GestureDetector(
+                    onTap: _canResend ? _handleResendOtp : null,
+                    child: Text(
+                      _canResend ? "Gửi lại" : "Gửi lại (${_start}s)",
+                      style: TextStyle(
+                        color: _canResend ? const Color(0xFFFF6B21) : Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        decoration: _canResend ? TextDecoration.underline : TextDecoration.none,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 30),
+              SizedBox(
+                width: double.infinity, height: 50,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _verifyOtp,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF6B21),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Xác nhận', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

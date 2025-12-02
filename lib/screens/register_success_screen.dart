@@ -21,7 +21,7 @@ class RegisterSuccessScreen extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFFFF3E9), // Màu cam nhạt ở trên
+              Colors.white, // Màu cam nhạt ở trên
               Color(0xFFFFE0CC), // Màu cam đậm hơn ở dưới
             ],
           ),
@@ -33,7 +33,7 @@ class RegisterSuccessScreen extends StatelessWidget {
             Image.asset(
               'assets/images/success_verify.png',
               // Điều chỉnh kích thước hiển thị vừa phải với màn hình
-              width: MediaQuery.of(context).size.width * 0.8,
+              width: MediaQuery.of(context).size.width * 2,
               fit: BoxFit.contain,
             ),
 
@@ -41,7 +41,7 @@ class RegisterSuccessScreen extends StatelessWidget {
             Transform.translate(
               // Offset(x, y): y là số âm để đẩy lên trên.
               // Hãy chỉnh số -80 này lớn hơn hoặc nhỏ hơn tùy vào độ rỗng của ảnh
-              offset: const Offset(20, -100),
+              offset: const Offset(20, 20),
               child: Column(
                 children: [
                   const Text(
@@ -72,7 +72,7 @@ class RegisterSuccessScreen extends StatelessWidget {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFF6B21),
-                      padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
@@ -82,7 +82,7 @@ class RegisterSuccessScreen extends StatelessWidget {
                         'Đăng nhập ngay',
                         style: TextStyle(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: 16,
                             fontWeight: FontWeight.bold
                         )
                     ),
