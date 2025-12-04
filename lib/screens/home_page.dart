@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'flash_sale_page.dart';
 import 'order_history_page.dart';
 import 'event_page.dart';
-
+import 'package:ecmobile/theme/app_colors.dart';
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -314,7 +314,7 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: Colors.orange, size: 28),
+              Icon(icon, color: AppColors.primary,  size: 28),
               SizedBox(height: 8),
               Text(
                 title,
@@ -426,7 +426,7 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
-              color: Colors.orange,
+              color: AppColors.primary,
             ),
           ),
         ),
@@ -441,7 +441,7 @@ class _HomePageState extends State<HomePage> {
                   label: Text(filterBrands[index]),
                   selected: selectedIndex == index,
                   onSelected: (selected) => onChipSelected(index),
-                  selectedColor: Colors.orange,
+                  selectedColor: AppColors.primary,
                   backgroundColor: Colors.grey.shade100,
                   labelStyle: TextStyle(
                     color: selectedIndex == index ? Colors.white : Colors.black,
@@ -450,7 +450,7 @@ class _HomePageState extends State<HomePage> {
                       borderRadius: BorderRadius.circular(20.0),
                       side: BorderSide(
                         color: selectedIndex == index
-                            ? Colors.orange
+                            ? AppColors.primary
                             : Colors.grey.shade300,
                       )),
                 ),
@@ -540,7 +540,7 @@ class _HomePageState extends State<HomePage> {
           height: 4.0,
           width: isSelected ? 24.0 : 12.0,
           decoration: BoxDecoration(
-            color: isSelected ? Colors.orange : Colors.grey.shade300,
+            color: isSelected ? AppColors.primary : Colors.grey.shade300,
             borderRadius: BorderRadius.circular(2.0),
           ),
         );
@@ -570,7 +570,7 @@ class _HomePageState extends State<HomePage> {
                 width: indicatorWidth / totalCount,
                 height: indicatorHeight,
                 decoration: BoxDecoration(
-                    color: Colors.orange,
+                    color: AppColors.primary,
                     borderRadius: BorderRadius.circular(indicatorHeight / 2)),
               ),
             ),
@@ -653,7 +653,7 @@ class _HomePageState extends State<HomePage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(category['icon'],
-                          color: Colors.orange.shade700, size: 30),
+                          color: AppColors.primary,  size: 30),
                     ),
                     SizedBox(height: 8),
                     Flexible(
@@ -692,7 +692,7 @@ class _HomePageState extends State<HomePage> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.orange,
+              color: AppColors.primary,
             ),
           ),
           TextButton(
@@ -842,7 +842,7 @@ class ProductCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(4)),
                   child: Text('Giảm 10%',
                       style: TextStyle(
-                          color: Colors.orange.shade800,
+                          color: AppColors.primary,
                           fontSize: 10,
                           fontWeight: FontWeight.bold)),
                 ),
@@ -860,7 +860,7 @@ class ProductCard extends StatelessWidget {
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
-                            color: Colors.orange),
+                            color: AppColors.primary ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis),
                   ),
@@ -873,7 +873,7 @@ class ProductCard extends StatelessWidget {
                   SizedBox(height: 8),
                   Text(formatCurrency(rawPrice),
                       style: TextStyle(
-                          color: Colors.orange.shade700,
+                          color: AppColors.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 16)),
                   Text(formatCurrency(oldPrice),
