@@ -2,6 +2,9 @@ import 'package:flutter/material.dart' hide CarouselController;
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'flash_sale_page.dart';
+import 'order_history_page.dart';
+import 'event_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -21,7 +24,7 @@ class _HomePageState extends State<HomePage> {
   int _currentAudioPageIndex = 0;
   int _currentMonitorPageIndex = 0;
 
-  // --- [MỚI] STATE QUẢN LÝ TRANG YÊU THÍCH ---
+  // State quản lý trang yêu thích
   int _currentFavoritePageIndex = 0;
 
   // --- STATE QUẢN LÝ LỌC ---
@@ -61,15 +64,11 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       String id = productData['id'];
       if (_isProductFavorite(id)) {
-        // Nếu đã thích thì xóa
         _favoriteProducts.removeWhere((item) => item['id'] == id);
-
-        // Reset về trang 0 nếu xóa hết sản phẩm của trang hiện tại
         if (_favoriteProducts.isEmpty) {
           _currentFavoritePageIndex = 0;
         }
       } else {
-        // Nếu chưa thích thì thêm vào
         _favoriteProducts.add(productData);
       }
     });
@@ -134,13 +133,10 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Tính toán kích thước
     double screenWidth = MediaQuery.of(context).size.width;
     double itemWidth = (screenWidth - 32.0 - 16.0) / 2;
     double childAspectRatio = 0.48;
     double itemHeight = itemWidth / childAspectRatio;
-
-    // sliderHeight: Chiều cao chuẩn cho Slider (gồm 2 hàng sản phẩm + khoảng cách)
     double sliderHeight = (itemHeight * 2) + 16.0 + 40.0;
 
     return SingleChildScrollView(
@@ -153,7 +149,6 @@ class _HomePageState extends State<HomePage> {
           _buildSectionHeader(title: 'SẢN PHẨM NỔI BẬT', onSeeMore: () {}),
           _buildFilterChips(),
 
-          // --- [ĐÃ SỬA] SECTION YÊU THÍCH DẠNG SLIDER ---
           _buildFavoriteSection(
               sliderHeight: sliderHeight,
               aspectRatio: childAspectRatio
@@ -174,19 +169,13 @@ class _HomePageState extends State<HomePage> {
             pageIndex: _currentPhonePageIndex,
             onChipSelected: (index) {
               setState(() {
-                if (_selectedPhoneChip == index) {
-                  _selectedPhoneChip = -1;
-                } else {
-                  _selectedPhoneChip = index;
-                }
+                _selectedPhoneChip = (_selectedPhoneChip == index) ? -1 : index;
                 _currentPhonePageIndex = 0;
                 _phoneStream = _createStream('cate_phone', _selectedPhoneChip,
                     ['Apple', 'Samsung', 'Xiaomi', 'Vivo']);
               });
             },
-            onPageChanged: (index) {
-              setState(() => _currentPhonePageIndex = index);
-            },
+            onPageChanged: (index) => setState(() => _currentPhonePageIndex = index),
           ),
 
           // 2. LAPTOP
@@ -200,19 +189,13 @@ class _HomePageState extends State<HomePage> {
             pageIndex: _currentLaptopPageIndex,
             onChipSelected: (index) {
               setState(() {
-                if (_selectedLaptopChip == index) {
-                  _selectedLaptopChip = -1;
-                } else {
-                  _selectedLaptopChip = index;
-                }
+                _selectedLaptopChip = (_selectedLaptopChip == index) ? -1 : index;
                 _currentLaptopPageIndex = 0;
                 _laptopStream = _createStream('cate_laptop', _selectedLaptopChip,
                     ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell']);
               });
             },
-            onPageChanged: (index) {
-              setState(() => _currentLaptopPageIndex = index);
-            },
+            onPageChanged: (index) => setState(() => _currentLaptopPageIndex = index),
           ),
 
           // 3. LOA / TAI NGHE
@@ -226,19 +209,13 @@ class _HomePageState extends State<HomePage> {
             pageIndex: _currentAudioPageIndex,
             onChipSelected: (index) {
               setState(() {
-                if (_selectedAudioChip == index) {
-                  _selectedAudioChip = -1;
-                } else {
-                  _selectedAudioChip = index;
-                }
+                _selectedAudioChip = (_selectedAudioChip == index) ? -1 : index;
                 _currentAudioPageIndex = 0;
                 _audioStream = _createStream('cate_audio', _selectedAudioChip,
                     ['Sony', 'JBL', 'Apple', 'Marshall']);
               });
             },
-            onPageChanged: (index) {
-              setState(() => _currentAudioPageIndex = index);
-            },
+            onPageChanged: (index) => setState(() => _currentAudioPageIndex = index),
           ),
 
           // 4. MÀN HÌNH
@@ -252,19 +229,13 @@ class _HomePageState extends State<HomePage> {
             pageIndex: _currentMonitorPageIndex,
             onChipSelected: (index) {
               setState(() {
-                if (_selectedMonitorChip == index) {
-                  _selectedMonitorChip = -1;
-                } else {
-                  _selectedMonitorChip = index;
-                }
+                _selectedMonitorChip = (_selectedMonitorChip == index) ? -1 : index;
                 _currentMonitorPageIndex = 0;
                 _monitorStream = _createStream('cate_monitor', _selectedMonitorChip,
                     ['LG', 'Samsung', 'Asus', 'MSI']);
               });
             },
-            onPageChanged: (index) {
-              setState(() => _currentMonitorPageIndex = index);
-            },
+            onPageChanged: (index) => setState(() => _currentMonitorPageIndex = index),
           ),
 
           SizedBox(height: 16),
@@ -273,15 +244,98 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- [ĐÃ CẬP NHẬT] WIDGET HIỂN THỊ YÊU THÍCH DẠNG SLIDER ---
+  // --- [FIXED] MENU CHÍNH VỚI EXPANDED ---
+  Widget _buildTopMenu() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      margin: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        crossAxisAlignment: CrossAxisAlignment.start, // Căn lề trên cùng
+        children: [
+          // Dùng Expanded cho TẤT CẢ các mục để chia đều và tránh lỗi tràn màn hình
+          Expanded(
+            child: _buildMenuItem(Icons.diamond, 'Hạng thành viên', () {
+              print("Bấm Hạng thành viên");
+            }),
+          ),
+          Expanded(
+            child: _buildMenuItem(Icons.flash_on, 'Flash Sale', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const FlashSalePage()),
+              );
+            }),
+          ),
+          Expanded(
+            child: _buildMenuItem(Icons.receipt_long, 'Lịch sử mua hàng', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const OrderHistoryPage()),
+              );
+            }),
+          ),
+          Expanded(
+            child: _buildMenuItem(Icons.event_note, 'Sự kiện', () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const EventPage()),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- [FIXED] MENU ITEM ---
+  Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        splashColor: Colors.orange.withOpacity(0.2),
+        highlightColor: Colors.orange.withOpacity(0.1),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 2.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: Colors.orange, size: 28),
+              SizedBox(height: 8),
+              Text(
+                title,
+                style: TextStyle(fontSize: 12),
+                textAlign: TextAlign.center, // Căn giữa
+                maxLines: 2, // Cho phép xuống dòng tối đa 2 dòng
+                overflow: TextOverflow.ellipsis, // Nếu dài quá thì ...
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFavoriteSection({
     required double sliderHeight,
     required double aspectRatio,
   }) {
-    // Nếu chưa có sản phẩm yêu thích thì ẩn đi
     if (_favoriteProducts.isEmpty) return SizedBox.shrink();
 
-    // Chia danh sách yêu thích thành các trang (mỗi trang 4 sản phẩm)
     final favoritePages = _chunkList(_favoriteProducts, 4);
 
     return Column(
@@ -304,14 +358,12 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
-
-        // Sử dụng CarouselSlider thay vì ListView
         CarouselSlider(
           options: CarouselOptions(
             initialPage: 0,
-            height: sliderHeight, // Chiều cao đồng bộ, không lo RenderFlex overflow
+            height: sliderHeight,
             viewportFraction: 1.0,
-            enableInfiniteScroll: false, // Không lặp vòng
+            enableInfiniteScroll: false,
             onPageChanged: (index, reason) {
               setState(() {
                 _currentFavoritePageIndex = index;
@@ -321,7 +373,7 @@ class _HomePageState extends State<HomePage> {
           items: favoritePages.map((pageItems) {
             return GridView.builder(
               padding: const EdgeInsets.all(16.0),
-              physics: NeverScrollableScrollPhysics(), // Tắt cuộn của GridView
+              physics: NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16.0,
@@ -330,7 +382,6 @@ class _HomePageState extends State<HomePage> {
               ),
               itemCount: pageItems.length,
               itemBuilder: (context, index) {
-                // Ép kiểu về Map<String, dynamic>
                 final data = pageItems[index] as Map<String, dynamic>;
                 return ProductCard(
                   data: data,
@@ -341,8 +392,6 @@ class _HomePageState extends State<HomePage> {
             );
           }).toList(),
         ),
-
-        // Chỉ hiển thị dấu chấm nếu có nhiều hơn 1 trang
         if (favoritePages.length > 1)
           Padding(
             padding: const EdgeInsets.only(bottom: 10.0),
@@ -351,13 +400,11 @@ class _HomePageState extends State<HomePage> {
               totalCount: favoritePages.length,
             ),
           ),
-
         Divider(thickness: 4, color: Colors.grey.shade100),
       ],
     );
   }
 
-  // --- HÀM BUILD SECTION FIREBASE ---
   Widget _buildFirebaseSection({
     required String title,
     required Stream<QuerySnapshot> stream,
@@ -451,13 +498,12 @@ class _HomePageState extends State<HomePage> {
                       ),
                       itemCount: pageDocs.length,
                       itemBuilder: (context, index) {
-                        // --- Lấy Data và ID ---
                         final doc = pageDocs[index] as QueryDocumentSnapshot;
                         final Map<String, dynamic> rawData =
                         doc.data() as Map<String, dynamic>;
                         final Map<String, dynamic> data = {
                           ...rawData,
-                          'id': doc.id, // Gắn ID vào data để quản lý
+                          'id': doc.id,
                         };
 
                         return ProductCard(
@@ -481,8 +527,6 @@ class _HomePageState extends State<HomePage> {
       ],
     );
   }
-
-  // --- CÁC WIDGET PHỤ TRỢ (Indicators, Sliders...) ---
 
   Widget _buildDashIndicator(
       {required int currentIndex, required int totalCount}) {
@@ -632,44 +676,6 @@ class _HomePageState extends State<HomePage> {
           currentIndex: _currentCategoryIndex,
           totalCount: categoryPages.length,
         ),
-      ],
-    );
-  }
-
-  Widget _buildTopMenu() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.orange.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      margin: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildMenuItem(Icons.diamond, 'Hạng thành viên'),
-          _buildMenuItem(Icons.flash_on, 'Flash Sale'),
-          _buildMenuItem(Icons.receipt_long, 'Lịch sử mua hàng'),
-          _buildMenuItem(Icons.event_note, 'Sự kiện đặc biệt'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuItem(IconData icon, String title) {
-    return Column(
-      children: [
-        Icon(icon, color: Colors.orange, size: 28),
-        SizedBox(height: 8),
-        Text(title, style: TextStyle(fontSize: 12)),
       ],
     );
   }
