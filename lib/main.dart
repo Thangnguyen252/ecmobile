@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 // SỬA LẠI ĐƯỜNG DẪN: Thêm 'layouts/' và dùng 'package:'
 import 'package:ecmobile/layouts/main_layout.dart';
+import 'package:ecmobile/screens/product_detail.dart'; // Tuấn mới thêm
 
 void main() {
   runApp(const MyApp());
@@ -15,6 +16,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Ứng dụng Mua sắm',
       debugShowCheckedModeBanner: false,
+
+      // KHỐI ROUTES ĐƯỢC THÊM VÀO ĐÂY
+      routes: { // Tuấn mới thêm
+        '/product-detail': (context) => const ProductDetailScreen(productId: 'temp_id'), // Tuấn mới thêm
+      }, // Tuấn mới thêm
+
       theme: ThemeData(
         primaryColor: AppColors.primary,
         scaffoldBackgroundColor: AppColors.background, // Màu nền chung
