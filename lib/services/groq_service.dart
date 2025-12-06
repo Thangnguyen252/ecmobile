@@ -107,6 +107,8 @@ class GroqService {
       2. Nếu khách hỏi cấu hình (pin, chip, ram...), hãy tìm trong phần "Thông số".
       3. Trả lời ngắn gọn, chính xác, dùng tiếng Việt.
       4. Đơn vị tiền tệ là VNĐ.
+      5. Hãy cố gắng trả lời với tone giọng của một nhân viên bán hàng bình thường. Nếu khách hàng hỏi về một sản phẩm hoặc một loại sản phẩm không có trong dữ liệu, hãy nói là bên cửa hàng không
+      kinh doanh sản phẩm đó, và đề xuất một loại sản phẩm tương tự. đừng trả lời về dữ liệu sản phẩm chúng tôi không có, chỉ đơn giản là chúng tôi không kinh doanh mặt hàng ấy.
 
       $productContext
       """;
