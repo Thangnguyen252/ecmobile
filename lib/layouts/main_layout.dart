@@ -21,7 +21,7 @@ class _MainLayoutState extends State<MainLayout> {
   int _cartItemCount = 5; // Dữ liệu giả, sau này lấy từ Firebase
   // ---
 
-  static final List<Widget> _widgetOptions = <Widget>[
+                                                                                                                                        static final List<Widget> _widgetOptions = <Widget>[
     const HomePage(),
     const Center(child: Text('Trang Danh mục')),
     const Center(child: Text('Trang Đơn hàng')),
