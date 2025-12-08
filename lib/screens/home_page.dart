@@ -5,7 +5,8 @@ import 'package:intl/intl.dart';
 import 'flash_sale_page.dart';
 import 'order_history_page.dart';
 import 'event_page.dart';
-import 'package:ecmobile/theme/app_colors.dart';
+import 'product_list_page.dart';
+
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -14,6 +15,9 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  // --- MÀU CHỦ ĐẠO (Đã sửa theo yêu cầu) ---
+  final Color primaryColor = const Color(0xFFFA661B);
+
   // --- STATE QUẢN LÝ CHỈ SỐ TRANG ---
   int _currentImageIndex = 0;
   int _currentCategoryIndex = 0;
@@ -23,20 +27,16 @@ class _HomePageState extends State<HomePage> {
   int _currentLaptopPageIndex = 0;
   int _currentAudioPageIndex = 0;
   int _currentMonitorPageIndex = 0;
-
-  // State quản lý trang yêu thích
   int _currentFavoritePageIndex = 0;
 
-  // --- STATE QUẢN LÝ LỌC ---
+  // State lọc
   int _selectedPhoneChip = -1;
   int _selectedLaptopChip = -1;
   int _selectedAudioChip = -1;
   int _selectedMonitorChip = -1;
 
-  // --- STATE QUẢN LÝ DANH SÁCH YÊU THÍCH ---
   List<Map<String, dynamic>> _favoriteProducts = [];
 
-  // --- STREAMS ---
   late Stream<QuerySnapshot> _phoneStream;
   late Stream<QuerySnapshot> _laptopStream;
   late Stream<QuerySnapshot> _audioStream;
@@ -45,17 +45,12 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _phoneStream = _createStream(
-        'cate_phone', _selectedPhoneChip, ['Apple', 'Samsung', 'Xiaomi', 'Vivo']);
-    _laptopStream = _createStream('cate_laptop', _selectedLaptopChip,
-        ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell']);
-    _audioStream = _createStream('cate_audio', _selectedAudioChip,
-        ['Sony', 'JBL', 'Apple', 'Marshall']);
-    _monitorStream = _createStream(
-        'cate_monitor', _selectedMonitorChip, ['LG', 'Samsung', 'Asus', 'MSI']);
+    _phoneStream = _createStream('cate_phone', _selectedPhoneChip, ['Apple', 'Samsung', 'Xiaomi', 'Vivo']);
+    _laptopStream = _createStream('cate_laptop', _selectedLaptopChip, ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell']);
+    _audioStream = _createStream('cate_audio', _selectedAudioChip, ['Sony', 'JBL', 'Apple', 'Marshall']);
+    _monitorStream = _createStream('cate_monitor', _selectedMonitorChip, ['LG', 'Samsung', 'Asus', 'MSI']);
   }
 
-  // --- HÀM XỬ LÝ YÊU THÍCH ---
   bool _isProductFavorite(String id) {
     return _favoriteProducts.any((item) => item['id'] == id);
   }
@@ -65,28 +60,21 @@ class _HomePageState extends State<HomePage> {
       String id = productData['id'];
       if (_isProductFavorite(id)) {
         _favoriteProducts.removeWhere((item) => item['id'] == id);
-        if (_favoriteProducts.isEmpty) {
-          _currentFavoritePageIndex = 0;
-        }
+        if (_favoriteProducts.isEmpty) _currentFavoritePageIndex = 0;
       } else {
         _favoriteProducts.add(productData);
       }
     });
   }
 
-  Stream<QuerySnapshot> _createStream(
-      String categoryId, int selectedIndex, List<String> brands) {
-    Query query = FirebaseFirestore.instance
-        .collection('products')
-        .where('categoryId', isEqualTo: categoryId);
-
+  Stream<QuerySnapshot> _createStream(String categoryId, int selectedIndex, List<String> brands) {
+    Query query = FirebaseFirestore.instance.collection('products').where('categoryId', isEqualTo: categoryId);
     if (selectedIndex != -1) {
       query = query.where('brand', isEqualTo: brands[selectedIndex]);
     }
     return query.snapshots();
   }
 
-  // --- DỮ LIỆU TĨNH ---
   final List<String> imgList = [
     'https://i.ytimg.com/vi/3s49ddWEluo/maxresdefault.jpg',
     'http://i.ytimg.com/vi/3i1OB6wKYms/maxresdefault.jpg',
@@ -119,14 +107,12 @@ class _HomePageState extends State<HomePage> {
     {'icon': Icons.cable, 'title': 'Cáp sạc'},
   ];
 
-  List<List<Map<String, dynamic>>> get categoryPages =>
-      [categoryPageA, categoryPageB];
+  List<List<Map<String, dynamic>>> get categoryPages => [categoryPageA, categoryPageB];
 
   List<List<dynamic>> _chunkList(List<dynamic> list, int chunkSize) {
     List<List<dynamic>> chunks = [];
     for (int i = 0; i < list.length; i += chunkSize) {
-      chunks.add(list.sublist(
-          i, i + chunkSize > list.length ? list.length : i + chunkSize));
+      chunks.add(list.sublist(i, i + chunkSize > list.length ? list.length : i + chunkSize));
     }
     return chunks;
   }
@@ -145,20 +131,12 @@ class _HomePageState extends State<HomePage> {
         children: [
           _buildTopMenu(),
           _buildImageCarousel(),
-
           _buildSectionHeader(title: 'SẢN PHẨM NỔI BẬT', onSeeMore: () {}),
           _buildFilterChips(),
-
-          _buildFavoriteSection(
-              sliderHeight: sliderHeight,
-              aspectRatio: childAspectRatio
-          ),
-
-          _buildAdBanner(
-              'https://cdn.tgdd.vn/Products/Images/522/294104/Slider/ipad-pro-m2-11-inch638035032348738269.jpg'),
+          _buildFavoriteSection(sliderHeight: sliderHeight, aspectRatio: childAspectRatio),
+          _buildAdBanner('https://cdn.tgdd.vn/Products/Images/522/294104/Slider/ipad-pro-m2-11-inch638035032348738269.jpg'),
           _buildCategorySlider(),
 
-          // 1. ĐIỆN THOẠI
           _buildFirebaseSection(
             title: 'ĐIỆN THOẠI',
             stream: _phoneStream,
@@ -167,18 +145,14 @@ class _HomePageState extends State<HomePage> {
             aspectRatio: childAspectRatio,
             selectedIndex: _selectedPhoneChip,
             pageIndex: _currentPhonePageIndex,
-            onChipSelected: (index) {
-              setState(() {
-                _selectedPhoneChip = (_selectedPhoneChip == index) ? -1 : index;
-                _currentPhonePageIndex = 0;
-                _phoneStream = _createStream('cate_phone', _selectedPhoneChip,
-                    ['Apple', 'Samsung', 'Xiaomi', 'Vivo']);
-              });
-            },
+            onChipSelected: (index) => setState(() {
+              _selectedPhoneChip = (_selectedPhoneChip == index) ? -1 : index;
+              _currentPhonePageIndex = 0;
+              _phoneStream = _createStream('cate_phone', _selectedPhoneChip, ['Apple', 'Samsung', 'Xiaomi', 'Vivo']);
+            }),
             onPageChanged: (index) => setState(() => _currentPhonePageIndex = index),
           ),
 
-          // 2. LAPTOP
           _buildFirebaseSection(
             title: 'LAPTOP',
             stream: _laptopStream,
@@ -187,18 +161,14 @@ class _HomePageState extends State<HomePage> {
             aspectRatio: childAspectRatio,
             selectedIndex: _selectedLaptopChip,
             pageIndex: _currentLaptopPageIndex,
-            onChipSelected: (index) {
-              setState(() {
-                _selectedLaptopChip = (_selectedLaptopChip == index) ? -1 : index;
-                _currentLaptopPageIndex = 0;
-                _laptopStream = _createStream('cate_laptop', _selectedLaptopChip,
-                    ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell']);
-              });
-            },
+            onChipSelected: (index) => setState(() {
+              _selectedLaptopChip = (_selectedLaptopChip == index) ? -1 : index;
+              _currentLaptopPageIndex = 0;
+              _laptopStream = _createStream('cate_laptop', _selectedLaptopChip, ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell']);
+            }),
             onPageChanged: (index) => setState(() => _currentLaptopPageIndex = index),
           ),
 
-          // 3. LOA / TAI NGHE
           _buildFirebaseSection(
             title: 'LOA / TAI NGHE',
             stream: _audioStream,
@@ -207,18 +177,14 @@ class _HomePageState extends State<HomePage> {
             aspectRatio: childAspectRatio,
             selectedIndex: _selectedAudioChip,
             pageIndex: _currentAudioPageIndex,
-            onChipSelected: (index) {
-              setState(() {
-                _selectedAudioChip = (_selectedAudioChip == index) ? -1 : index;
-                _currentAudioPageIndex = 0;
-                _audioStream = _createStream('cate_audio', _selectedAudioChip,
-                    ['Sony', 'JBL', 'Apple', 'Marshall']);
-              });
-            },
+            onChipSelected: (index) => setState(() {
+              _selectedAudioChip = (_selectedAudioChip == index) ? -1 : index;
+              _currentAudioPageIndex = 0;
+              _audioStream = _createStream('cate_audio', _selectedAudioChip, ['Sony', 'JBL', 'Apple', 'Marshall']);
+            }),
             onPageChanged: (index) => setState(() => _currentAudioPageIndex = index),
           ),
 
-          // 4. MÀN HÌNH
           _buildFirebaseSection(
             title: 'MÀN HÌNH',
             stream: _monitorStream,
@@ -227,24 +193,20 @@ class _HomePageState extends State<HomePage> {
             aspectRatio: childAspectRatio,
             selectedIndex: _selectedMonitorChip,
             pageIndex: _currentMonitorPageIndex,
-            onChipSelected: (index) {
-              setState(() {
-                _selectedMonitorChip = (_selectedMonitorChip == index) ? -1 : index;
-                _currentMonitorPageIndex = 0;
-                _monitorStream = _createStream('cate_monitor', _selectedMonitorChip,
-                    ['LG', 'Samsung', 'Asus', 'MSI']);
-              });
-            },
+            onChipSelected: (index) => setState(() {
+              _selectedMonitorChip = (_selectedMonitorChip == index) ? -1 : index;
+              _currentMonitorPageIndex = 0;
+              _monitorStream = _createStream('cate_monitor', _selectedMonitorChip, ['LG', 'Samsung', 'Asus', 'MSI']);
+            }),
             onPageChanged: (index) => setState(() => _currentMonitorPageIndex = index),
           ),
-
           SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  // --- [FIXED] MENU CHÍNH VỚI EXPANDED ---
+  // --- [ĐÃ SỬA HOÀN TOÀN] MENU CHÍNH ---
   Widget _buildTopMenu() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -253,7 +215,7 @@ class _HomePageState extends State<HomePage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.orange.withOpacity(0.1),
+            color: primaryColor.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: Offset(0, 3),
@@ -263,9 +225,9 @@ class _HomePageState extends State<HomePage> {
       margin: const EdgeInsets.all(16.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        crossAxisAlignment: CrossAxisAlignment.start, // Căn lề trên cùng
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Dùng Expanded cho TẤT CẢ các mục để chia đều và tránh lỗi tràn màn hình
+          // Expanded chỉ nằm ở đây (cha) là đúng chuẩn
           Expanded(
             child: _buildMenuItem(Icons.diamond, 'Hạng thành viên', () {
               print("Bấm Hạng thành viên");
@@ -273,26 +235,17 @@ class _HomePageState extends State<HomePage> {
           ),
           Expanded(
             child: _buildMenuItem(Icons.flash_on, 'Flash Sale', () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const FlashSalePage()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const FlashSalePage()));
             }),
           ),
           Expanded(
             child: _buildMenuItem(Icons.receipt_long, 'Lịch sử mua hàng', () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const OrderHistoryPage()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const OrderHistoryPage()));
             }),
           ),
           Expanded(
             child: _buildMenuItem(Icons.event_note, 'Sự kiện', () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const EventPage()),
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (context) => const EventPage()));
             }),
           ),
         ],
@@ -300,28 +253,32 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- [FIXED] MENU ITEM ---
+  // --- [ĐÃ SỬA HOÀN TOÀN] ITEM CON: KHÔNG CÒN EXPANDED Ở ĐÂY NỮA ---
   Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
-        splashColor: Colors.orange.withOpacity(0.2),
-        highlightColor: Colors.orange.withOpacity(0.1),
+        splashColor: primaryColor.withOpacity(0.2),
+        highlightColor: primaryColor.withOpacity(0.1),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 2.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: AppColors.primary,  size: 28),
+              Icon(icon, color: primaryColor, size: 28), // Màu #FA661B
               SizedBox(height: 8),
               Text(
                 title,
-                style: TextStyle(fontSize: 12),
-                textAlign: TextAlign.center, // Căn giữa
-                maxLines: 2, // Cho phép xuống dòng tối đa 2 dòng
-                overflow: TextOverflow.ellipsis, // Nếu dài quá thì ...
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: primaryColor, // Màu #FA661B
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -330,12 +287,8 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildFavoriteSection({
-    required double sliderHeight,
-    required double aspectRatio,
-  }) {
+  Widget _buildFavoriteSection({required double sliderHeight, required double aspectRatio}) {
     if (_favoriteProducts.isEmpty) return SizedBox.shrink();
-
     final favoritePages = _chunkList(_favoriteProducts, 4);
 
     return Column(
@@ -347,14 +300,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               Icon(Icons.favorite, color: Colors.red),
               SizedBox(width: 8),
-              Text(
-                'SẢN PHẨM YÊU THÍCH',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
+              Text('SẢN PHẨM YÊU THÍCH', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
             ],
           ),
         ),
@@ -364,11 +310,7 @@ class _HomePageState extends State<HomePage> {
             height: sliderHeight,
             viewportFraction: 1.0,
             enableInfiniteScroll: false,
-            onPageChanged: (index, reason) {
-              setState(() {
-                _currentFavoritePageIndex = index;
-              });
-            },
+            onPageChanged: (index, reason) => setState(() => _currentFavoritePageIndex = index),
           ),
           items: favoritePages.map((pageItems) {
             return GridView.builder(
@@ -395,10 +337,7 @@ class _HomePageState extends State<HomePage> {
         if (favoritePages.length > 1)
           Padding(
             padding: const EdgeInsets.only(bottom: 10.0),
-            child: _buildScrollIndicator(
-              currentIndex: _currentFavoritePageIndex,
-              totalCount: favoritePages.length,
-            ),
+            child: _buildScrollIndicator(currentIndex: _currentFavoritePageIndex, totalCount: favoritePages.length),
           ),
         Divider(thickness: 4, color: Colors.grey.shade100),
       ],
@@ -421,14 +360,7 @@ class _HomePageState extends State<HomePage> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 16.0),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
-          ),
+          child: Text(title, style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: primaryColor)),
         ),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -441,18 +373,12 @@ class _HomePageState extends State<HomePage> {
                   label: Text(filterBrands[index]),
                   selected: selectedIndex == index,
                   onSelected: (selected) => onChipSelected(index),
-                  selectedColor: AppColors.primary,
+                  selectedColor: primaryColor,
                   backgroundColor: Colors.grey.shade100,
-                  labelStyle: TextStyle(
-                    color: selectedIndex == index ? Colors.white : Colors.black,
-                  ),
+                  labelStyle: TextStyle(color: selectedIndex == index ? Colors.white : Colors.black),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20.0),
-                      side: BorderSide(
-                        color: selectedIndex == index
-                            ? AppColors.primary
-                            : Colors.grey.shade300,
-                      )),
+                      side: BorderSide(color: selectedIndex == index ? primaryColor : Colors.grey.shade300)),
                 ),
               );
             }),
@@ -462,17 +388,12 @@ class _HomePageState extends State<HomePage> {
         StreamBuilder<QuerySnapshot>(
           stream: stream,
           builder: (context, snapshot) {
-            if (snapshot.hasError)
-              return Center(child: Text('Lỗi tải dữ liệu: ${snapshot.error}'));
+            if (snapshot.hasError) return Center(child: Text('Lỗi tải dữ liệu: ${snapshot.error}'));
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return Container(
-                  height: sliderHeight,
-                  child: Center(child: CircularProgressIndicator()));
+              return Container(height: sliderHeight, child: Center(child: CircularProgressIndicator()));
             }
             final products = snapshot.data!.docs;
-            if (products.isEmpty)
-              return Container(
-                  height: 200, child: Center(child: Text("Chưa có sản phẩm nào")));
+            if (products.isEmpty) return Container(height: 200, child: Center(child: Text("Chưa có sản phẩm nào")));
 
             final productPages = _chunkList(products, 4);
 
@@ -499,13 +420,7 @@ class _HomePageState extends State<HomePage> {
                       itemCount: pageDocs.length,
                       itemBuilder: (context, index) {
                         final doc = pageDocs[index] as QueryDocumentSnapshot;
-                        final Map<String, dynamic> rawData =
-                        doc.data() as Map<String, dynamic>;
-                        final Map<String, dynamic> data = {
-                          ...rawData,
-                          'id': doc.id,
-                        };
-
+                        final data = {...doc.data() as Map<String, dynamic>, 'id': doc.id};
                         return ProductCard(
                           data: data,
                           isFavorite: _isProductFavorite(data['id']),
@@ -516,10 +431,7 @@ class _HomePageState extends State<HomePage> {
                   }).toList(),
                 ),
                 SizedBox(height: 10),
-                _buildScrollIndicator(
-                  currentIndex: pageIndex,
-                  totalCount: productPages.length,
-                ),
+                _buildScrollIndicator(currentIndex: pageIndex, totalCount: productPages.length),
               ],
             );
           },
@@ -528,8 +440,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildDashIndicator(
-      {required int currentIndex, required int totalCount}) {
+  Widget _buildDashIndicator({required int currentIndex, required int totalCount}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(totalCount, (index) {
@@ -540,7 +451,7 @@ class _HomePageState extends State<HomePage> {
           height: 4.0,
           width: isSelected ? 24.0 : 12.0,
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.grey.shade300,
+            color: isSelected ? primaryColor : Colors.grey.shade300,
             borderRadius: BorderRadius.circular(2.0),
           ),
         );
@@ -548,8 +459,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildScrollIndicator(
-      {required int currentIndex, required int totalCount}) {
+  Widget _buildScrollIndicator({required int currentIndex, required int totalCount}) {
     if (totalCount <= 1) return SizedBox.shrink();
     const double indicatorWidth = 100.0;
     const double indicatorHeight = 4.0;
@@ -557,9 +467,7 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         width: indicatorWidth,
         height: indicatorHeight,
-        decoration: BoxDecoration(
-            color: Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(indicatorHeight / 2)),
+        decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(indicatorHeight / 2)),
         child: Stack(
           children: [
             AnimatedPositioned(
@@ -569,9 +477,7 @@ class _HomePageState extends State<HomePage> {
               child: Container(
                 width: indicatorWidth / totalCount,
                 height: indicatorHeight,
-                decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(indicatorHeight / 2)),
+                decoration: BoxDecoration(color: primaryColor, borderRadius: BorderRadius.circular(indicatorHeight / 2)),
               ),
             ),
           ],
@@ -589,33 +495,107 @@ class _HomePageState extends State<HomePage> {
             autoPlay: true,
             aspectRatio: 2.0,
             enlargeCenterPage: true,
-            onPageChanged: (index, reason) {
-              setState(() {
-                _currentImageIndex = index;
-              });
-            },
+            onPageChanged: (index, reason) => setState(() => _currentImageIndex = index),
           ),
-          items: imgList
-              .map((item) => Container(
+          items: imgList.map((item) => Container(
             child: Center(
                 child: ClipRRect(
                   borderRadius: BorderRadius.all(Radius.circular(12.0)),
-                  child: Image.network(item,
-                      fit: BoxFit.cover, width: 1000.0),
+                  child: Image.network(item, fit: BoxFit.cover, width: 1000.0),
                 )),
-          ))
-              .toList(),
+          )).toList(),
         ),
         SizedBox(height: 10),
-        _buildDashIndicator(
-          currentIndex: _currentImageIndex,
-          totalCount: imgList.length,
-        ),
+        _buildDashIndicator(currentIndex: _currentImageIndex, totalCount: imgList.length),
       ],
     );
   }
 
   Widget _buildCategorySlider() {
+    // Map category titles to their IDs and brands
+    final Map<String, Map<String, dynamic>> categoryConfig = {
+      'Tablet': {
+        'id': 'cate_tablet',
+        'brands': ['Apple', 'Samsung', 'Xiaomi', 'Lenovo'],
+      },
+      'Điện thoại': {
+        'id': 'cate_phone',
+        'brands': ['Apple', 'Samsung', 'Xiaomi', 'Vivo', 'OPPO'],
+      },
+      'Laptop': {
+        'id': 'cate_laptop',
+        'brands': ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell'],
+      },
+      'Bộ PC': {
+        'id': 'cate_pc',
+        'brands': ['HP', 'Dell', 'Asus', 'MSI'],
+      },
+      'Tai nghe': {
+        'id': 'cate_audio',
+        'brands': ['Sony', 'JBL', 'Apple', 'Marshall'],
+      },
+      'Màn hình': {
+        'id': 'cate_monitor',
+        'brands': ['LG', 'Samsung', 'Asus', 'MSI'],
+      },
+      'Tivi': {
+        'id': 'cate_tv',
+        'brands': ['Samsung', 'LG', 'Sony', 'TCL'],
+      },
+      'RAM': {
+        'id': 'cate_ram',
+        'brands': ['Kingston', 'Corsair', 'G.Skill', 'Crucial'],
+      },
+      'VGA': {
+        'id': 'cate_vga',
+        'brands': ['NVIDIA', 'AMD', 'Asus', 'MSI', 'Gigabyte'],
+      },
+      'CPU': {
+        'id': 'cate_cpu',
+        'brands': ['Intel', 'AMD'],
+      },
+      'Chuột': {
+        'id': 'cate_mouse',
+        'brands': ['Logitech', 'Razer', 'Corsair'],
+      },
+      'Bàn phím': {
+        'id': 'cate_keyboard',
+        'brands': ['Logitech', 'Razer', 'Corsair', 'Keychron'],
+      },
+      'Máy in': {
+        'id': 'cate_printer',
+        'brands': ['HP', 'Canon', 'Epson', 'Brother'],
+      },
+      'Router': {
+        'id': 'cate_router',
+        'brands': ['TP-Link', 'Asus', 'D-Link', 'Linksys'],
+      },
+      'Camera': {
+        'id': 'cate_camera',
+        'brands': ['Sony', 'Canon', 'Nikon', 'GoPro'],
+      },
+      'Đồng hồ': {
+        'id': 'cate_watch',
+        'brands': ['Apple', 'Samsung', 'Garmin', 'Fitbit'],
+      },
+      'Loa': {
+        'id': 'cate_speaker',
+        'brands': ['JBL', 'Sony', 'Marshall', 'Bose'],
+      },
+      'Sạc dự phòng': {
+        'id': 'cate_powerbank',
+        'brands': ['Anker', 'Samsung', 'Xiaomi', 'Baseus'],
+      },
+      'USB': {
+        'id': 'cate_usb',
+        'brands': ['Kingston', 'SanDisk', 'Samsung'],
+      },
+      'Cáp sạc': {
+        'id': 'cate_cable',
+        'brands': ['Anker', 'Belkin', 'Baseus', 'Ugreen'],
+      },
+    };
+
     return Column(
       children: [
         CarouselSlider(
@@ -625,11 +605,7 @@ class _HomePageState extends State<HomePage> {
             viewportFraction: 1.0,
             enableInfiniteScroll: false,
             autoPlay: false,
-            onPageChanged: (index, reason) {
-              setState(() {
-                _currentCategoryIndex = index;
-              });
-            },
+            onPageChanged: (index, reason) => setState(() => _currentCategoryIndex = index),
           ),
           items: categoryPages.map((pageData) {
             return GridView.builder(
@@ -644,21 +620,51 @@ class _HomePageState extends State<HomePage> {
               itemCount: pageData.length,
               itemBuilder: (context, index) {
                 final category = pageData[index];
+                final String title = category['title'];
+                final config = categoryConfig[title];
+
                 return Column(
                   children: [
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                    Material(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        onTap: () {
+                          if (config != null) {
+                            // Navigate to product list page
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ProductListPage(
+                                  categoryId: config['id'],
+                                  categoryTitle: title,
+                                  brands: config['brands'],
+                                ),
+                              ),
+                            );
+                          } else {
+                            // Show a message if category is not configured
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Danh mục "$title" đang được cập nhật'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
                         borderRadius: BorderRadius.circular(12),
+                        splashColor: primaryColor.withOpacity(0.2),
+                        highlightColor: primaryColor.withOpacity(0.1),
+                        child: Container(
+                          padding: EdgeInsets.all(12),
+                          child: Icon(category['icon'], color: primaryColor, size: 30),
+                        ),
                       ),
-                      child: Icon(category['icon'],
-                          color: AppColors.primary,  size: 30),
                     ),
                     SizedBox(height: 8),
                     Flexible(
                       child: Text(
-                        category['title'],
+                        title,
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 12),
                         maxLines: 2,
@@ -672,33 +678,19 @@ class _HomePageState extends State<HomePage> {
           }).toList(),
         ),
         SizedBox(height: 16.0),
-        _buildScrollIndicator(
-          currentIndex: _currentCategoryIndex,
-          totalCount: categoryPages.length,
-        ),
+        _buildScrollIndicator(currentIndex: _currentCategoryIndex, totalCount: categoryPages.length),
       ],
     );
   }
 
-  Widget _buildSectionHeader(
-      {required String title, required VoidCallback onSeeMore}) {
+  Widget _buildSectionHeader({required String title, required VoidCallback onSeeMore}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
-          ),
-          TextButton(
-            onPressed: onSeeMore,
-            child: Text('Xem thêm >'),
-          )
+          Text(title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor)),
+          TextButton(onPressed: onSeeMore, child: Text('Xem thêm >')),
         ],
       ),
     );
@@ -710,16 +702,10 @@ class _HomePageState extends State<HomePage> {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
-        children: filters
-            .map((filter) => Padding(
+        children: filters.map((filter) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: ActionChip(
-            label: Text(filter),
-            onPressed: () {},
-            backgroundColor: Colors.grey.shade200,
-          ),
-        ))
-            .toList(),
+          child: ActionChip(label: Text(filter), onPressed: () {}, backgroundColor: Colors.grey.shade200),
+        )).toList(),
       ),
     );
   }
@@ -735,18 +721,12 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// --- PRODUCT CARD ---
 class ProductCard extends StatelessWidget {
   final Map<String, dynamic> data;
   final bool isFavorite;
   final VoidCallback onToggleFavorite;
 
-  const ProductCard({
-    Key? key,
-    required this.data,
-    required this.isFavorite,
-    required this.onToggleFavorite,
-  }) : super(key: key);
+  const ProductCard({Key? key, required this.data, required this.isFavorite, required this.onToggleFavorite}) : super(key: key);
 
   String formatCurrency(num price) {
     final format = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
@@ -757,45 +737,27 @@ class ProductCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(top: 4.0),
       padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade200,
-        borderRadius: BorderRadius.circular(4.0),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      decoration: BoxDecoration(color: Colors.orange.shade200, borderRadius: BorderRadius.circular(4.0)),
+      child: Text(text, style: TextStyle(fontSize: 10, color: Colors.grey.shade700), maxLines: 1, overflow: TextOverflow.ellipsis),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final Color primaryColor = const Color(0xFFFA661B);
     String name = data['name'] ?? 'Sản phẩm';
     num rawPrice = data['basePrice'] ?? 0;
-    String imageUrl = 'https://via.placeholder.com/150';
-    if (data['images'] != null && (data['images'] as List).isNotEmpty) {
-      imageUrl = (data['images'] as List)[0];
-    }
+    String imageUrl = (data['images'] != null && (data['images'] as List).isNotEmpty) ? (data['images'] as List)[0] : 'https://via.placeholder.com/150';
     String specs = data['description'] ?? '';
     num oldPrice = data['originalPrice'] ?? (rawPrice * 1.1);
-    double rating = (data['ratingAverage'] is num)
-        ? (data['ratingAverage'] as num).toDouble()
-        : 4.5;
+    double rating = (data['ratingAverage'] is num) ? (data['ratingAverage'] as num).toDouble() : 4.5;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.0),
         border: Border.all(color: Colors.grey.shade200, width: 1.0),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: Offset(0, 3))
-        ],
+        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.05), spreadRadius: 1, blurRadius: 5, offset: Offset(0, 3))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -804,49 +766,10 @@ class ProductCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
-                child: Image.network(
-                  imageUrl,
-                  height: 150,
-                  width: double.infinity,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 150,
-                    color: Colors.grey.shade200,
-                    child:
-                    Icon(Icons.broken_image, color: Colors.grey.shade400),
-                  ),
-                ),
+                child: Image.network(imageUrl, height: 150, width: double.infinity, fit: BoxFit.contain, errorBuilder: (ctx, err, stack) => Container(height: 150, color: Colors.grey.shade200, child: Icon(Icons.broken_image, color: Colors.grey.shade400))),
               ),
-              Positioned(
-                top: 8,
-                left: 8,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
-                      borderRadius: BorderRadius.circular(4)),
-                  child: Text('Trả góp 0%',
-                      style: TextStyle(
-                          color: Colors.blue.shade800,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold)),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                      color: Colors.orange.shade100,
-                      borderRadius: BorderRadius.circular(4)),
-                  child: Text('Giảm 10%',
-                      style: TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold)),
-                ),
-              ),
+              Positioned(top: 8, left: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(4)), child: Text('Trả góp 0%', style: TextStyle(color: Colors.blue.shade800, fontSize: 10, fontWeight: FontWeight.bold)))),
+              Positioned(top: 8, right: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(4)), child: Text('Giảm 10%', style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold)))),
             ],
           ),
           Expanded(
@@ -855,32 +778,12 @@ class ProductCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Flexible(
-                    child: Text(name,
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: AppColors.primary ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                  ),
+                  Flexible(child: Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor), maxLines: 2, overflow: TextOverflow.ellipsis)),
                   SizedBox(height: 4),
-                  Text(specs,
-                      style:
-                      TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(specs, style: TextStyle(fontSize: 12, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
                   SizedBox(height: 8),
-                  Text(formatCurrency(rawPrice),
-                      style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
-                  Text(formatCurrency(oldPrice),
-                      style: TextStyle(
-                          color: Colors.grey.shade500,
-                          decoration: TextDecoration.lineThrough,
-                          fontSize: 12)),
+                  Text(formatCurrency(rawPrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text(formatCurrency(oldPrice), style: TextStyle(color: Colors.grey.shade500, decoration: TextDecoration.lineThrough, fontSize: 12)),
                   SizedBox(height: 8),
                   _buildPromoTag('Tặng gói Google AI 1 năm'),
                   _buildPromoTag('Trả góp 0% qua thẻ'),
@@ -888,22 +791,8 @@ class ProductCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(children: [
-                        Icon(Icons.star, color: Colors.amber, size: 16),
-                        SizedBox(width: 4),
-                        Text(rating.toString(), style: TextStyle(fontSize: 12))
-                      ]),
-                      // --- NÚT TIM GỌI HÀM CALLBACK TỪ CHA ---
-                      IconButton(
-                        icon: Icon(
-                          isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: isFavorite ? Colors.red : Colors.grey,
-                          size: 20,
-                        ),
-                        onPressed: onToggleFavorite,
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
-                      ),
+                      Row(children: [Icon(Icons.star, color: Colors.amber, size: 16), SizedBox(width: 4), Text(rating.toString(), style: TextStyle(fontSize: 12))]),
+                      IconButton(icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? Colors.red : Colors.grey, size: 20), onPressed: onToggleFavorite, padding: EdgeInsets.zero, constraints: BoxConstraints()),
                     ],
                   ),
                 ],
