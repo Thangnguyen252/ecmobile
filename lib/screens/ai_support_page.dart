@@ -155,7 +155,9 @@ class _AiSupportPageState extends State<AiSupportPage> {
               ChatSession session = ChatSession.fromSnapshot(docs[index]);
 
               return Card(
-                color: AppColors.white,
+                color: Colors.white,
+                elevation: 2,
+
                 margin: const EdgeInsets.only(bottom: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: InkWell(
@@ -170,11 +172,13 @@ class _AiSupportPageState extends State<AiSupportPage> {
                     padding: const EdgeInsets.all(12.0),
                     child: Row(
                       children: [
+                        // --- THAY ĐỔI AVATAR THÀNH ẢNH ASSET ---
                         const CircleAvatar(
-                          backgroundColor: Colors.black87,
                           radius: 25,
-                          child: Icon(Icons.smart_toy, color: Colors.white),
+                          backgroundImage: AssetImage('assets/images/ai_avatar.jpg'),
+                          backgroundColor: Colors.transparent, // Đặt nền trong suốt để tránh viền nếu ảnh PNG
                         ),
+                        // ---------------------------------------
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -194,11 +198,11 @@ class _AiSupportPageState extends State<AiSupportPage> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.edit, color: AppColors.blue),
+                          icon: const Icon(Icons.edit, color: Colors.grey),
                           onPressed: () => _editSessionName(session.sessionId, session.sessionName),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: AppColors.red),
+                          icon: const Icon(Icons.delete_outline, color: Colors.grey),
                           onPressed: () => _deleteSession(session.sessionId),
                         ),
                       ],
@@ -212,7 +216,7 @@ class _AiSupportPageState extends State<AiSupportPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _createNewSession,
-        backgroundColor: AppColors.primary, // Đã đổi thành màu primary
+        backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );

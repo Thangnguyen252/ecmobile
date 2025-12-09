@@ -6,7 +6,7 @@ import '../models/chat_model.dart';
 
 class GroqService {
   // --- KEY GROQ (GIỮ NGUYÊN CỦA BẠN) ---
-  static const String _apiKey = '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';
+  static const String _apiKey = 'gsk_vPmCqg2vpihaPmpJdEMOWGdyb3FYqYnZKvu64kHxLyV7KUVXw2gG';
 
   static const String _apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
   static const String _model = 'llama-3.3-70b-versatile';

@@ -148,7 +148,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
                             children: [
                               const Icon(Icons.bolt, size: 16, color: Colors.orange),
                               const SizedBox(width: 5),
-                              Text("Groq AI", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[600])),
+                              Text("Darter AI", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey[600])),
                             ],
                           ),
                         if (!isUser) const SizedBox(height: 4),
