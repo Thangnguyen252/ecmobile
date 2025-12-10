@@ -5,6 +5,7 @@ import 'package:ecmobile/screens/cart_page.dart';
 import 'package:ecmobile/widgets/custom_search_app_bar.dart';
 // --- THÊM IMPORT TRANG TÀI KHOẢN ---
 import 'package:ecmobile/screens/account_page.dart';
+import 'package:ecmobile/screens/ai_support_page.dart'; // IMPORT TRANG MỚI
 
 class MainLayout extends StatefulWidget {
   const MainLayout({Key? key}) : super(key: key);
@@ -16,24 +17,21 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
-  // --- QUẢN LÝ STATE CHO APPBAR ---
-  // Vì AppBar giờ đã thuộc về MainLayout,
-  // MainLayout phải chịu trách nhiệm quản lý state của nó.
   final TextEditingController _searchController = TextEditingController();
-  int _cartItemCount = 5; // Dữ liệu giả, sau này lấy từ Firebase
-  // ---
+  int _cartItemCount = 5;
 
   static final List<Widget> _widgetOptions = <Widget>[
     const HomePage(),
     const Center(child: Text('Trang Danh mục')),
     const Center(child: Text('Trang Đơn hàng')),
-    const Center(child: Text('Trang AI Hỗ trợ')),
+    const AiSupportPage(), // THAY THẾ TEXT BẰNG TRANG AI
+    const Center(child: Text('Trang Tài khoản')),
     const AccountPage(), // Thay Text bằng AccountPage
   ];
 
   @override
   void dispose() {
-    _searchController.dispose(); // Hủy controller khi không dùng
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -55,10 +53,12 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // --- APPBAR ĐÃ ĐƯỢC ĐẶT TẠI ĐÂY ---
-      appBar: CustomSearchAppBar(
-        searchController: _searchController, // Dùng controller đã quản lý
-        cartItemCount: _cartItemCount, // Dùng cart item đã quản lý
+      // Ẩn AppBar nếu đang ở trang AI (vì trang AI có AppBar riêng)
+      appBar: _selectedIndex == 3
+          ? null
+          : CustomSearchAppBar(
+        searchController: _searchController,
+        cartItemCount: _cartItemCount,
         onCartPressed: _navigateToCart,
       ),
       // ---
@@ -78,8 +78,8 @@ class _MainLayoutState extends State<MainLayout> {
           ),
           child: BottomNavigationBar(
             type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.transparent, // Quan trọng
-            elevation: 0, // Không đổ bóng làm hở góc
+            backgroundColor: Colors.transparent,
+            elevation: 0,
             currentIndex: _selectedIndex,
             onTap: _onItemTapped,
             selectedItemColor: AppColors.white,
