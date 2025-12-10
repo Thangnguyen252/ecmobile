@@ -4,8 +4,6 @@ import 'package:intl/intl.dart';
 import '../models/chat_model.dart';
 import 'chat_detail_page.dart';
 import 'package:ecmobile/theme/app_colors.dart';
-import 'package:ecmobile/widgets/custom_search_app_bar.dart'; // Import widget Search Bar tùy chỉnh
-import 'package:ecmobile/screens/cart_page.dart'; // Import trang giỏ hàng để điều hướng
 
 class AiSupportPage extends StatefulWidget {
   const AiSupportPage({Key? key}) : super(key: key);
@@ -19,25 +17,6 @@ class _AiSupportPageState extends State<AiSupportPage> {
   final String currentUserId = "user_thangvh2004";
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  // --- CONTROLLERS CHO CUSTOM APP BAR ---
-  final TextEditingController _searchController = TextEditingController();
-  final int _cartItemCount = 5; // Số lượng giả định trong giỏ hàng
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _navigateToCart() {
-    // Điều hướng đến trang giỏ hàng khi nhấn icon giỏ hàng
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const CartPage()),
-    );
-  }
-  // -------------------------------------
 
   void _createNewSession() async {
     String sessionId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -114,16 +93,6 @@ class _AiSupportPageState extends State<AiSupportPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
-
-      // --- SỬ DỤNG CUSTOM SEARCH APP BAR ---
-      appBar: CustomSearchAppBar(
-        searchController: _searchController,
-        cartItemCount: _cartItemCount,
-        onCartPressed: _navigateToCart,
-        showBackButton: false, // Ẩn nút back vì đây là trang chính trên tab bar (nếu cần)
-      ),
-      // ------------------------------------
-
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('chat_sessions')
@@ -172,13 +141,11 @@ class _AiSupportPageState extends State<AiSupportPage> {
                     padding: const EdgeInsets.all(12.0),
                     child: Row(
                       children: [
-                        // --- THAY ĐỔI AVATAR THÀNH ẢNH ASSET ---
                         const CircleAvatar(
                           radius: 25,
                           backgroundImage: AssetImage('assets/images/ai_avatar.jpg'),
-                          backgroundColor: Colors.transparent, // Đặt nền trong suốt để tránh viền nếu ảnh PNG
+                          backgroundColor: Colors.transparent,
                         ),
-                        // ---------------------------------------
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
