@@ -1,59 +1,60 @@
-// lib/main.dart — PHIÊN BẢN CÓ FIREBASE + GIỮ NGUYÊN ĐỔI MÀU VIỀN TEXTFIELD
-
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // File này sinh ra bởi lệnh flutterfire configure
-
-import 'package:ecmobile/screens/login_screen.dart';
+import 'firebase_options.dart';
+//import 'package:ecmobile/utils/seed_laptop.dart';
 import 'package:ecmobile/theme/app_colors.dart';
+// SỬA LẠI ĐƯỜNG DẪN: Thêm 'layouts/' và dùng 'package:'
+import 'package:ecmobile/layouts/main_layout.dart';
 
-Future<void> main() async {
-  // Bắt buộc khi dùng async trong main
+// 1. IMPORT FILE MỚI
+//import 'package:ecmobile/utils/seed_customer.dart';
+// 1. QUAN TRỌNG: Import file chứa hàm nạp dữ liệu bạn vừa tạo
+// (Đảm bảo bạn đã tạo file lib/utils/seed_data.dart và dán code tôi gửi ở tin nhắn trước)
+//import 'package:ecmobile/utils/seed_data.dart';
+
+void main() async {
+  // 1. Đảm bảo Flutter được khởi tạo
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Khởi tạo Firebase
+  // 2. Khởi tạo Firebase (Nếu cần)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // 3. Chạy ứng dụng
   runApp(const MyApp());
-}
+} // <<< LỖI BỊ Ở ĐÂY: Hàm main ban đầu không có dấu đóng '}'
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'ECMobile',
+      title: 'Ứng dụng Mua sắm',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Roboto',
-        scaffoldBackgroundColor: AppColors.white,
-        primarySwatch: Colors.orange,
 
-        // Giữ nguyên cấu hình thay đổi màu viền TextField
-        inputDecorationTheme: InputDecorationTheme(
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.0),
-            borderSide: const BorderSide(
-              color: AppColors.primary,
-              width: 1.5,
-            ),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.0),
-            borderSide: BorderSide(
-              color: Colors.grey,
-              width: 1.0,
-            ),
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
+      // KHỐI ROUTES ĐƯỢC THÊM VÀO ĐÂY
+
+      theme: ThemeData(
+        primaryColor: AppColors.primary,
+        scaffoldBackgroundColor: AppColors.background, // Màu nền chung
+
+        // SỬ DỤNG FONT MẶC ĐỊNH:
+        // Xóa hoặc comment (thêm //) dòng này
+        // fontFamily: 'Inter',
+
+        // Tùy chỉnh theme để AppBar và BottomNav không bị màu lạ
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.primary,
+          elevation: 0, // Bỏ bóng đổ
+        ),
+        bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+          backgroundColor: AppColors.primary,
+          selectedItemColor: AppColors.white,
         ),
       ),
-      home: const LoginScreen(),
+      home: const MainLayout(), // Bắt đầu với layout chính
     );
   }
 }
