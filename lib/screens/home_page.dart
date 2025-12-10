@@ -253,7 +253,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- [ĐÃ SỬA HOÀN TOÀN] ITEM CON: KHÔNG CÒN EXPANDED Ở ĐÂY NỮA ---
   Widget _buildMenuItem(IconData icon, String title, VoidCallback onTap) {
     return Material(
       color: Colors.transparent,
@@ -263,7 +262,7 @@ class _HomePageState extends State<HomePage> {
         splashColor: primaryColor.withOpacity(0.2),
         highlightColor: primaryColor.withOpacity(0.1),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 2.0),
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -274,7 +273,7 @@ class _HomePageState extends State<HomePage> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
-                  color: primaryColor, // Màu #FA661B
+                  color: Colors.black, // Màu #FA661B
                   fontWeight: FontWeight.w500,
                 ),
                 maxLines: 2,
@@ -779,12 +778,12 @@ class ProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Flexible(child: Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor), maxLines: 2, overflow: TextOverflow.ellipsis)),
-                  SizedBox(height: 4),
+                  SizedBox(height: 5),
                   Text(specs, style: TextStyle(fontSize: 12, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  SizedBox(height: 8),
+                  SizedBox(height: 2),
                   Text(formatCurrency(rawPrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
                   Text(formatCurrency(oldPrice), style: TextStyle(color: Colors.grey.shade500, decoration: TextDecoration.lineThrough, fontSize: 12)),
-                  SizedBox(height: 8),
+                  SizedBox(height: 4),
                   _buildPromoTag('Tặng gói Google AI 1 năm'),
                   _buildPromoTag('Trả góp 0% qua thẻ'),
                   Spacer(),
