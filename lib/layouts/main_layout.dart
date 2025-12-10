@@ -1,3 +1,5 @@
+
+import 'package:ecmobile/screens/product_search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/screens/home_page.dart';
@@ -17,6 +19,9 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
+  // --- QUẢN LÝ STATE CHO APPBAR ---
+  // Vì AppBar giờ đã thuộc về MainLayout,
+  // MainLayout phải chịu trách nhiệm quản lý state của nó.
   final TextEditingController _searchController = TextEditingController();
   int _cartItemCount = 5;
 
@@ -50,6 +55,15 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
+  void _navigateToSearch() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProductSearchScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -59,9 +73,12 @@ class _MainLayoutState extends State<MainLayout> {
           : CustomSearchAppBar(
         searchController: _searchController,
         cartItemCount: _cartItemCount,
+      appBar: CustomSearchAppBar(
+        searchController: _searchController,
+        cartItemCount: _cartItemCount,
         onCartPressed: _navigateToCart,
+        onSearchTap: _navigateToSearch,
       ),
-      // ---
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -85,38 +102,40 @@ class _MainLayoutState extends State<MainLayout> {
             selectedItemColor: AppColors.white,
             unselectedItemColor: AppColors.white.withOpacity(0.7),
             selectedLabelStyle:
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: AppColors.primary,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        selectedItemColor: AppColors.white,
+        unselectedItemColor: AppColors.white.withOpacity(0.7),
+        selectedLabelStyle:
             const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            unselectedLabelStyle: const TextStyle(fontSize: 12),
-            showUnselectedLabels: true,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: 'Trang chủ',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.grid_view_outlined),
-                activeIcon: Icon(Icons.grid_view_rounded),
-                label: 'Danh mục',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.receipt_long_outlined),
-                activeIcon: Icon(Icons.receipt_long),
-                label: 'Đơn hàng',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.lightbulb_outline),
-                activeIcon: Icon(Icons.lightbulb),
-                label: 'AI hỗ trợ',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: 'Tài khoản',
-              ),
-            ],
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
+        showUnselectedLabels: true,
+        // Đã xóa item "AI hỗ trợ"
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Trang chủ',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.grid_view_outlined),
+            activeIcon: Icon(Icons.grid_view_rounded),
+            label: 'Danh mục',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.receipt_long_outlined),
+            activeIcon: Icon(Icons.receipt_long),
+            label: 'Đơn hàng',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Tài khoản',
+          ),
+        ],
       ),
 
     );
