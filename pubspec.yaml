@@ -33,6 +33,7 @@ dependencies:
     # --- THÊM THƯ VIỆN NÀY ĐỂ GỌI API ---
   http: ^1.6.0 # (hoặc phiên bản mới hơn)
     # ---
+  image_picker: ^1.0.4  # Thêm thư viện này để chọn ảnh
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -42,6 +43,7 @@ dependencies:
   firebase_auth: ^6.1.2
   google_sign_in: ^6.2.1
 
+  firebase_storage: ^13.0.4
 
 dev_dependencies:
   flutter_test:
