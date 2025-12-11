@@ -1,11 +1,15 @@
+import 'package:ecmobile/screens/login_screen.dart';
+import 'package:ecmobile/services/google_auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/models/customer_model.dart';
 import 'package:ecmobile/services/customer_service.dart';
 import 'package:intl/intl.dart';
 import 'package:ecmobile/screens/student_verify_page.dart';
-// --- THÊM IMPORT TRANG MỚI ---
-import 'package:ecmobile/screens/user_info_page.dart';import 'package:ecmobile/screens/membership_rules_page.dart';
+import 'package:ecmobile/screens/user_info_page.dart';
+import 'package:ecmobile/screens/membership_rules_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class AccountPage extends StatefulWidget {
   const AccountPage({Key? key}) : super(key: key);
 
@@ -16,17 +20,33 @@ class AccountPage extends StatefulWidget {
 class _AccountPageState extends State<AccountPage> {
   final CustomerService _customerService = CustomerService();
 
-  // Helper định dạng tiền
   String _formatPrice(double price) {
     final format = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
     return format.format(price).replaceAll(RegExp(r'\s+'), '');
   }
 
+  Future<void> _handleLogout() async {
+    // Sign out from Google
+    await GoogleAuthService.signOut();
+
+    // Clear saved email
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_email');
+
+    // Navigate to LoginScreen
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6F8), // Nền xám nhạt
-      // Dùng StreamBuilder để lấy dữ liệu realtime
+      backgroundColor: const Color(0xFFF4F6F8),
       body: StreamBuilder<CustomerModel?>(
         stream: _customerService.getUserStream(),
         builder: (context, snapshot) {
@@ -43,22 +63,12 @@ class _AccountPageState extends State<AccountPage> {
           return SingleChildScrollView(
             child: Column(
               children: [
-                // 1. Header (Avatar + Info)
                 _buildHeader(user),
-
-                // 2. Thống kê (Stats)
                 _buildStatsSection(user),
-
                 const SizedBox(height: 16),
-
-                // 3. Menu Options (Đã cập nhật)
                 _buildMenuSection(user),
-
                 const SizedBox(height: 24),
-
-                // 4. Logout Button
                 _buildLogoutButton(),
-
                 const SizedBox(height: 32),
               ],
             ),
@@ -68,16 +78,12 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  // --- WIDGET CON ---
-
-  // 1. Header Profile
   Widget _buildHeader(CustomerModel user) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 48, 16, 24), // Padding top 48 để tránh status bar
+      padding: const EdgeInsets.fromLTRB(16, 48, 16, 24),
       child: Row(
         children: [
-          // Avatar (Dùng ảnh mạng hoặc placeholder)
           Container(
             width: 70,
             height: 70,
@@ -85,13 +91,12 @@ class _AccountPageState extends State<AccountPage> {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.grey[200]!, width: 2),
               image: const DecorationImage(
-                image: NetworkImage("https://i.pravatar.cc/300?img=12"), // Avatar mẫu
+                image: NetworkImage("https://i.pravatar.cc/300?img=12"),
                 fit: BoxFit.cover,
               ),
             ),
           ),
           const SizedBox(width: 16),
-          // Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,13 +118,12 @@ class _AccountPageState extends State<AccountPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Rank Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1), // Vàng nhạt
+                    color: const Color(0xFFFFF8E1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFFFC107)), // Viền vàng
+                    border: Border.all(color: const Color(0xFFFFC107)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -127,11 +131,11 @@ class _AccountPageState extends State<AccountPage> {
                       const Icon(Icons.diamond_outlined, size: 14, color: Color(0xFFFFC107)),
                       const SizedBox(width: 4),
                       Text(
-                        user.membershipRank, // "Kim cương"
+                        user.membershipRank,
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF8F00), // Cam đậm
+                          color: Color(0xFFFF8F00),
                         ),
                       ),
                     ],
@@ -140,7 +144,6 @@ class _AccountPageState extends State<AccountPage> {
               ],
             ),
           ),
-          // Edit Icon (Góc phải)
           IconButton(
             onPressed: () {},
             icon: const Icon(Icons.edit_outlined, color: AppColors.textSecondary),
@@ -150,19 +153,17 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  // 2. Thống kê (2 ô vuông)
   Widget _buildStatsSection(CustomerModel user) {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Row(
         children: [
-          // Ô 1: Đơn hàng
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F8FF), // Xanh nhạt
+                color: const Color(0xFFF5F8FF),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -181,12 +182,11 @@ class _AccountPageState extends State<AccountPage> {
             ),
           ),
           const SizedBox(width: 12),
-          // Ô 2: Tổng chi tiêu
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF5E5), // Cam nhạt
+                color: const Color(0xFFFFF5E5),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -209,9 +209,7 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  // 3. Menu List (Đã cập nhật icon cam và divider đều nhau)
   Widget _buildMenuSection(CustomerModel user) {
-    // Định nghĩa Divider chung để tái sử dụng
     const divider = Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE));
 
     return Container(
@@ -223,8 +221,6 @@ class _AccountPageState extends State<AccountPage> {
             title: "Thông tin cá nhân",
             subtitle: "Chỉnh sửa thông tin, địa chỉ",
             onTap: () {
-              // Điều hướng sang trang Cập nhật thông tin
-              // Truyền object 'user' hiện tại sang để điền sẵn vào form
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -237,14 +233,13 @@ class _AccountPageState extends State<AccountPage> {
           _buildMenuItem(
             icon: Icons.card_membership,
             title: "Hạng thành viên",
-            trailingText: user.membershipRank, // Lấy từ Firebase
+            trailingText: user.membershipRank,
             onTap: () {
-              // Điều hướng sang trang Quy tắc thành viên
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => MembershipRulesPage(
-                    currentRank: user.membershipRank, // Truyền rank hiện tại để highlight
+                    currentRank: user.membershipRank,
                   ),
                 ),
               );
@@ -256,8 +251,6 @@ class _AccountPageState extends State<AccountPage> {
             title: "Học sinh - Sinh viên",
             trailingText: user.isStudent ? "Đã xác thực" : "Chưa xác thực",
             onTap: () {
-              // Nếu đã là sinh viên rồi thì có thể hiện thông báo "Đã xác thực"
-              // Nếu chưa, chuyển sang trang xác thực
               if (user.isStudent) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Bạn đã được xác thực là HSSV!')),
@@ -283,7 +276,7 @@ class _AccountPageState extends State<AccountPage> {
           _buildMenuItem(
             icon: Icons.favorite_border,
             title: "Sản phẩm yêu thích",
-            trailingText: "12", // Số lượng demo
+            trailingText: "12",
             onTap: () {},
           ),
           divider,
@@ -328,10 +321,9 @@ class _AccountPageState extends State<AccountPage> {
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: const Color(0xFFFA661B).withOpacity(0.1), // Nền cam nhạt
+          color: const Color(0xFFFA661B).withOpacity(0.1),
           shape: BoxShape.circle,
         ),
-        // Icon màu cam primary FA661B
         child: Icon(icon, color: const Color(0xFFFA661B), size: 20),
       ),
       title: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
@@ -349,7 +341,6 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
-  // 4. Logout Button
   Widget _buildLogoutButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -357,13 +348,11 @@ class _AccountPageState extends State<AccountPage> {
         width: double.infinity,
         height: 48,
         child: OutlinedButton(
-          onPressed: () {
-            // Logic đăng xuất
-          },
+          onPressed: _handleLogout,
           style: OutlinedButton.styleFrom(
             side: const BorderSide(color: Colors.red),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            foregroundColor: Colors.red, // Màu chữ và hiệu ứng click
+            foregroundColor: Colors.red,
           ),
           child: const Text("Đăng xuất", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),

@@ -1,60 +1,48 @@
+import 'package:ecmobile/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
-//import 'package:ecmobile/utils/seed_laptop.dart';
 import 'package:ecmobile/theme/app_colors.dart';
-// SỬA LẠI ĐƯỜNG DẪN: Thêm 'layouts/' và dùng 'package:'
 import 'package:ecmobile/layouts/main_layout.dart';
 
-// 1. IMPORT FILE MỚI
-//import 'package:ecmobile/utils/seed_customer.dart';
-// 1. QUAN TRỌNG: Import file chứa hàm nạp dữ liệu bạn vừa tạo
-// (Đảm bảo bạn đã tạo file lib/utils/seed_data.dart và dán code tôi gửi ở tin nhắn trước)
-//import 'package:ecmobile/utils/seed_data.dart';
-
 void main() async {
-  // 1. Đảm bảo Flutter được khởi tạo
   WidgetsFlutterBinding.ensureInitialized();
-
-  // 2. Khởi tạo Firebase (Nếu cần)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 3. Chạy ứng dụng
-  runApp(const MyApp());
-} // <<< LỖI BỊ Ở ĐÂY: Hàm main ban đầu không có dấu đóng '}'
+  // Check if the user is already logged in
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  String? userEmail = prefs.getString('user_email');
+
+  runApp(MyApp(isLoggedIn: userEmail != null));
+}
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  final bool isLoggedIn;
+
+  const MyApp({Key? key, required this.isLoggedIn}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Ứng dụng Mua sắm',
       debugShowCheckedModeBanner: false,
-
-      // KHỐI ROUTES ĐƯỢC THÊM VÀO ĐÂY
-
       theme: ThemeData(
         primaryColor: AppColors.primary,
-        scaffoldBackgroundColor: AppColors.background, // Màu nền chung
-
-        // SỬ DỤNG FONT MẶC ĐỊNH:
-        // Xóa hoặc comment (thêm //) dòng này
-        // fontFamily: 'Inter',
-
-        // Tùy chỉnh theme để AppBar và BottomNav không bị màu lạ
+        scaffoldBackgroundColor: AppColors.background,
         appBarTheme: const AppBarTheme(
           backgroundColor: AppColors.primary,
-          elevation: 0, // Bỏ bóng đổ
+          elevation: 0,
         ),
         bottomNavigationBarTheme: const BottomNavigationBarThemeData(
           backgroundColor: AppColors.primary,
           selectedItemColor: AppColors.white,
         ),
       ),
-      home: const MainLayout(), // Bắt đầu với layout chính
+      // If logged in, go to MainLayout, otherwise go to LoginScreen
+      home: isLoggedIn ? const MainLayout() : const LoginScreen(),
     );
   }
 }

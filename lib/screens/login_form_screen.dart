@@ -1,10 +1,11 @@
-// lib/screens/login_form_screen.dart
+import 'package:ecmobile/layouts/main_layout.dart';
 import 'package:ecmobile/services/google_auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:ecmobile/screens/home_page.dart';
 import 'package:ecmobile/screens/forgot_password_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class LoginFormScreen extends StatefulWidget {
   const LoginFormScreen({super.key});
 
@@ -44,25 +45,19 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
       );
 
       if (userCredential.user != null) {
-        DocumentSnapshot userDoc = await FirebaseFirestore.instance
-            .collection('customers')
-            .doc(userCredential.user!.uid)
-            .get();
+        // Save the user's email
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_email', email);
 
-        if (userDoc.exists) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Đăng nhập thành công!')),
-            );
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => const HomePage()),
-                  (route) => false,
-            );
-          }
-        } else {
-          _showError('Không tìm thấy thông tin người dùng.');
-          await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Đăng nhập thành công!')),
+          );
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const MainLayout()),
+            (route) => false,
+          );
         }
       }
     } on FirebaseAuthException catch (e) {
@@ -140,7 +135,6 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () {
-                  // Chuyển sang màn hình Quên Mật Khẩu
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
@@ -189,11 +183,10 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Nút Google: Chỉnh size và offset tại đây
                 _buildSocialButton(
                   assetPath: 'assets/images/google_logo.png',
                   iconSize: 45.0,
-                  offsetX: 10.0, // Dịch sang trái một chút
+                  offsetX: 10.0,
                   onTap: () {
                     GoogleAuthService.signInWithGoogle(context);
                   },
@@ -201,11 +194,10 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
 
                 const SizedBox(width: 30),
 
-                // Nút Facebook
                 _buildSocialButton(
                   assetPath: 'assets/images/facebook_logo.png',
                   iconSize: 80.0,
-                  offsetX: 5.0, // Dịch sang phải một chút
+                  offsetX: 5.0,
                 ),
               ],
             ),
@@ -273,13 +265,12 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
     );
   }
 
-  // Widget đã cập nhật: Tương tự như LoginScreen
   Widget _buildSocialButton({
     required String assetPath,
     double iconSize = 50.0,
     double offsetX = 0.0,
     double offsetY = 0.0,
-    VoidCallback? onTap, // Thêm dòng này
+    VoidCallback? onTap,
   }) {
     return Transform.translate(
       offset: Offset(offsetX, offsetY),
@@ -290,7 +281,6 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
           height: iconSize + 5,
           child: Stack(
             children: [
-              // Lớp Bóng đổ
               Positioned(
                 top: 2,
                 left: 1,
@@ -302,7 +292,6 @@ class _LoginFormScreenState extends State<LoginFormScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-              // Lớp Ảnh chính
               Image.asset(
                 assetPath,
                 width: iconSize,
