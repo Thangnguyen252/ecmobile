@@ -17,15 +17,10 @@ class MainLayout extends StatefulWidget {
 class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
-  // --- QUẢN LÝ STATE CHO APPBAR ---
-  // Vì AppBar giờ đã thuộc về MainLayout,
-  // MainLayout phải chịu trách nhiệm quản lý state của nó.
   final TextEditingController _searchController = TextEditingController();
   int _cartItemCount = 5; // Example value
 
-  // Corrected list of widgets for the body
   static final List<Widget> _widgetOptions = <Widget>[
-                                                                                                                                        static final List<Widget> _widgetOptions = <Widget>[
     const HomePage(),
     const Center(child: Text('Trang Danh mục')),
     const Center(child: Text('Trang Đơn hàng')),
@@ -66,14 +61,12 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // --- APPBAR ĐÃ ĐƯỢC ĐẶT TẠI ĐÂY ---
       appBar: CustomSearchAppBar(
         searchController: _searchController,
         cartItemCount: _cartItemCount,
         onCartPressed: _navigateToCart,
         onSearchTap: _navigateToSearch,
       ),
-      // ---
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -130,7 +123,6 @@ class _MainLayoutState extends State<MainLayout> {
           ),
         ),
       ),
-
     );
   }
 }

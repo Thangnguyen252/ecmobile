@@ -1,3 +1,4 @@
+import 'package:ecmobile/screens/product_detail.dart';
 import 'package:flutter/material.dart' hide CarouselController;
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -750,55 +751,66 @@ class ProductCard extends StatelessWidget {
     String specs = data['description'] ?? '';
     num oldPrice = data['originalPrice'] ?? (rawPrice * 1.1);
     double rating = (data['ratingAverage'] is num) ? (data['ratingAverage'] as num).toDouble() : 4.5;
+    String productId = data['id'];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: Colors.grey.shade200, width: 1.0),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.05), spreadRadius: 1, blurRadius: 5, offset: Offset(0, 3))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
-                child: Image.network(imageUrl, height: 150, width: double.infinity, fit: BoxFit.contain, errorBuilder: (ctx, err, stack) => Container(height: 150, color: Colors.grey.shade200, child: Icon(Icons.broken_image, color: Colors.grey.shade400))),
-              ),
-              Positioned(top: 8, left: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(4)), child: Text('Trả góp 0%', style: TextStyle(color: Colors.blue.shade800, fontSize: 10, fontWeight: FontWeight.bold)))),
-              Positioned(top: 8, right: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(4)), child: Text('Giảm 10%', style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold)))),
-            ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailScreen(productId: productId),
           ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Flexible(child: Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor), maxLines: 2, overflow: TextOverflow.ellipsis)),
-                  SizedBox(height: 5),
-                  Text(specs, style: TextStyle(fontSize: 12, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  SizedBox(height: 2),
-                  Text(formatCurrency(rawPrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text(formatCurrency(oldPrice), style: TextStyle(color: Colors.grey.shade500, decoration: TextDecoration.lineThrough, fontSize: 12)),
-                  SizedBox(height: 4),
-                  _buildPromoTag('Tặng gói Google AI 1 năm'),
-                  _buildPromoTag('Trả góp 0% qua thẻ'),
-                  Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(children: [Icon(Icons.star, color: Colors.amber, size: 16), SizedBox(width: 4), Text(rating.toString(), style: TextStyle(fontSize: 12))]),
-                      IconButton(icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? Colors.red : Colors.grey, size: 20), onPressed: onToggleFavorite, padding: EdgeInsets.zero, constraints: BoxConstraints()),
-                    ],
-                  ),
-                ],
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(color: Colors.grey.shade200, width: 1.0),
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.05), spreadRadius: 1, blurRadius: 5, offset: Offset(0, 3))],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
+                  child: Image.network(imageUrl, height: 150, width: double.infinity, fit: BoxFit.contain, errorBuilder: (ctx, err, stack) => Container(height: 150, color: Colors.grey.shade200, child: Icon(Icons.broken_image, color: Colors.grey.shade400))),
+                ),
+                Positioned(top: 8, left: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(4)), child: Text('Trả góp 0%', style: TextStyle(color: Colors.blue.shade800, fontSize: 10, fontWeight: FontWeight.bold)))),
+                Positioned(top: 8, right: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(4)), child: Text('Giảm 10%', style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold)))),
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Flexible(child: Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                    SizedBox(height: 5),
+                    Text(specs, style: TextStyle(fontSize: 12, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    SizedBox(height: 2),
+                    Text(formatCurrency(rawPrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(formatCurrency(oldPrice), style: TextStyle(color: Colors.grey.shade500, decoration: TextDecoration.lineThrough, fontSize: 12)),
+                    SizedBox(height: 4),
+                    _buildPromoTag('Tặng gói Google AI 1 năm'),
+                    _buildPromoTag('Trả góp 0% qua thẻ'),
+                    Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(children: [Icon(Icons.star, color: Colors.amber, size: 16), SizedBox(width: 4), Text(rating.toString(), style: TextStyle(fontSize: 12))]),
+                        IconButton(icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? Colors.red : Colors.grey, size: 20), onPressed: onToggleFavorite, padding: EdgeInsets.zero, constraints: BoxConstraints()),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:ecmobile/screens/product_detail.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -285,27 +286,38 @@ class _ProductListPageState extends State<ProductListPage> {
     String specs = data['description'] ?? '';
     double rating = (data['ratingAverage'] is num) ? (data['ratingAverage'] as num).toDouble() : 4.5;
     int discountPercent = originalPrice > basePrice ? (((originalPrice - basePrice) / originalPrice) * 100).round() : 0;
+    String productId = data['id'];
 
-    return Container(
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 4, offset: const Offset(0, 2))]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(12)), child: Image.network(imageUrl, height: 150, width: double.infinity, fit: BoxFit.contain, errorBuilder: (_, __, ___) => Container(height: 150, color: Colors.grey.shade100))),
-              if (discountPercent > 0) Positioned(top: 8, left: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)), child: Text('-$discountPercent%', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
-            ],
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailScreen(productId: productId),
           ),
-          Expanded(child: Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 4), Text(specs, style: TextStyle(fontSize: 11, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
-            const Spacer(), Text(_formatCurrency(basePrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
-            if (discountPercent > 0) Text(_formatCurrency(originalPrice), style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 11)),
-            const SizedBox(height: 6),
-            Row(children: [Icon(Icons.star, color: Colors.amber, size: 14), const SizedBox(width: 4), Text("$rating", style: const TextStyle(fontSize: 11)), const Spacer(), const Icon(Icons.favorite_border, size: 18, color: Colors.grey)])
-          ]))),
-        ],
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 4, offset: const Offset(0, 2))]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(12)), child: Image.network(imageUrl, height: 150, width: double.infinity, fit: BoxFit.contain, errorBuilder: (_, __, ___) => Container(height: 150, color: Colors.grey.shade100))),
+                if (discountPercent > 0) Positioned(top: 8, left: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)), child: Text('-$discountPercent%', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
+              ],
+            ),
+            Expanded(child: Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
+              const SizedBox(height: 4), Text(specs, style: TextStyle(fontSize: 11, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
+              const Spacer(), Text(_formatCurrency(basePrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
+              if (discountPercent > 0) Text(_formatCurrency(originalPrice), style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 11)),
+              const SizedBox(height: 6),
+              Row(children: [Icon(Icons.star, color: Colors.amber, size: 14), const SizedBox(width: 4), Text("$rating", style: const TextStyle(fontSize: 11)), const Spacer(), const Icon(Icons.favorite_border, size: 18, color: Colors.grey)])
+            ]))),
+          ],
+        ),
       ),
     );
   }
