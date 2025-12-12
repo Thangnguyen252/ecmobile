@@ -1,5 +1,3 @@
-// lib/screens/register_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:ecmobile/screens/otp_verify_screen.dart';
 import 'package:ecmobile/services/email_auth_service.dart';
@@ -32,9 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // --- LOGIC GỬI MÃ EMAIL ---
   Future<void> _handleRegister() async {
-    // 1. Validate
     if (_emailController.text.isEmpty ||
         _phoneController.text.isEmpty ||
         _nameController.text.isEmpty ||
@@ -55,12 +51,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
-    // 2. Tạo mã OTP
     String otp = EmailAuthService.generateOTP();
     String email = _emailController.text.trim();
     String name = _nameController.text.trim();
 
-    // 3. Gửi Email qua EmailJS
     bool isSent = await EmailAuthService.sendOTP(
       name: name,
       email: email,
@@ -70,7 +64,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = false);
 
     if (isSent) {
-      // 4. Chuyển sang màn hình OTP
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -81,8 +74,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
               "fullName": name,
               "email": email,
               "phoneNumber": _phoneController.text.trim(),
-              "password": _passwordController.text,
             },
+            password: _passwordController.text, // Pass the password securely
           ),
         ),
       );
@@ -114,8 +107,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Column(
           children: [
             const SizedBox(height: 20),
-
-            // --- Sử dụng Widget mới có hiệu ứng Zoom ---
 
             ScaleTextField(
               controller: _emailController,
@@ -186,7 +177,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-// --- Widget Text Field có hiệu ứng phóng to (Scale) ---
 class ScaleTextField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
@@ -214,7 +204,6 @@ class ScaleTextField extends StatefulWidget {
 }
 
 class _ScaleTextFieldState extends State<ScaleTextField> {
-  // FocusNode để lắng nghe trạng thái tiêu điểm
   final FocusNode _focusNode = FocusNode();
   bool _isFocused = false;
 
@@ -247,7 +236,6 @@ class _ScaleTextFieldState extends State<ScaleTextField> {
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        // Widget tạo hiệu ứng phóng to
         AnimatedScale(
           scale: _isFocused ? 1.05 : 1.0, // Phóng to 1.05 lần khi focus
           duration: const Duration(milliseconds: 200), // Thời gian hiệu ứng 0.2s

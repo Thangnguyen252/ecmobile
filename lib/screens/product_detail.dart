@@ -1,3 +1,5 @@
+import 'package:ecmobile/models/customer_model.dart';
+import 'package:ecmobile/services/customer_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -17,6 +19,7 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  final CustomerService _customerService = CustomerService();
   // --- STATE DỮ LIỆU ---
   bool _isLoading = true;
   String? _errorMessage;
@@ -26,6 +29,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   int _selectedVersionIndex = 0;
   int _selectedColorIndex = 0;
   int _currentImageIndex = 0;
+  int _quantity = 1; // Thêm biến số lượng
 
   // --- BIẾN DỮ LIỆU HIỂN THỊ ---
   List<String> _bannerImages = [];
@@ -202,268 +206,319 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           IconButton(icon: const Icon(Icons.more_horiz), onPressed: () {}),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(height: 1, color: Colors.grey),
+      body: StreamBuilder<CustomerModel?>(
+          stream: _customerService.getUserStream(),
+          builder: (context, snapshot) {
+            final user = snapshot.data;
+            final isFavorite = user?.favoriteProducts.contains(widget.productId) ?? false;
 
-                  // 1. BANNER TÍNH NĂNG
-                  _buildFeatureBanner(primaryColor),
-
-                  // 2. GIÁ & TÊN & ĐÁNH GIÁ
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            return Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Giá tiền (Ngang hàng)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              _formatCurrency(currentPrice),
-                              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor),
-                            ),
-                            const SizedBox(width: 10),
+                        const Divider(height: 1, color: Colors.grey),
 
-                            // --- SỬA Ở ĐÂY: Thêm Transform.translate ---
-                            if (originalPrice > currentPrice)
-                              Transform.translate(
-                                // Tùy chỉnh vị trí: Offset(ngang, dọc)
-                                // Ví dụ: (0, -4) là giữ nguyên ngang, nhích lên trên 4 đơn vị
-                                offset: const Offset(0, -4),
-                                child: Text(
-                                  _formatCurrency(originalPrice),
-                                  style: const TextStyle(fontSize: 16, color: Colors.grey, decoration: TextDecoration.lineThrough),
-                                ),
-                              ),
-                            // ------------------------------------------
-                          ],
-                        ),
+                        // 1. BANNER TÍNH NĂNG
+                        _buildFeatureBanner(primaryColor),
 
-                        const SizedBox(height: 10),
-
-                        // Tên sản phẩm
-                        Text(
-                          _productData!['name'],
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-
-                        const SizedBox(height: 8),
-
-                        // Rating & Yêu thích
-                        Row(
-                          children: [
-                            ...List.generate(5, (index) {
-                              if (index < ratingAverage.floor()) {
-                                return const Icon(Icons.star, color: Colors.amber, size: 18);
-                              } else if (index < ratingAverage) {
-                                return const Icon(Icons.star_half, color: Colors.amber, size: 18);
-                              }
-                              return const Icon(Icons.star_border, color: Colors.amber, size: 18);
-                            }),
-                            const SizedBox(width: 5),
-                            Text("($reviewCount)", style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                            const Spacer(),
-                            const Icon(Icons.favorite_border, color: Colors.red, size: 20),
-                            const SizedBox(width: 4),
-                            const Text("Yêu thích", style: TextStyle(color: Colors.red, fontSize: 13)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // 3. THẺ ƯU ĐÃI
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: _buildOfferCard(primaryColor, textRed),
-                  ),
-
-                  const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
-
-                  // 4. PHIÊN BẢN (Variants)
-                  if (_versions.length > 1 || _versions[0] != 'Tiêu chuẩn')
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Chọn phiên bản", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 10, runSpacing: 10,
-                            children: List.generate(_versions.length, (index) {
-                              bool isSelected = _selectedVersionIndex == index;
-                              return GestureDetector(
-                                onTap: () => setState(() => _selectedVersionIndex = index),
-                                child: CustomPaint(
-                                  painter: isSelected ? _CornerTrianglePainter(primaryColor: primaryColor) : null,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: isSelected ? primaryColor : Colors.grey.shade300),
-                                    ),
-                                    child: Text(_versions[index], style: TextStyle(color: isSelected ? primaryColor : Colors.black, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        // 2. GIÁ & TÊN & ĐÁNH GIÁ
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Giá tiền (Ngang hàng)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    _formatCurrency(currentPrice),
+                                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: primaryColor),
                                   ),
-                                ),
-                              );
-                            }),
-                          ),
-                        ],
-                      ),
-                    ),
+                                  const SizedBox(width: 10),
 
-                  // 5. MÀU SẮC
-                  if (_colors.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("Chọn màu sắc", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                          const SizedBox(height: 10),
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: Row(
-                              children: List.generate(_colors.length, (index) {
-                                bool isSelected = _selectedColorIndex == index;
-                                var colorItem = _colors[index];
-                                return GestureDetector(
-                                  onTap: () => setState(() => _selectedColorIndex = index),
-                                  child: Container(
-                                    margin: const EdgeInsets.only(right: 12),
-                                    child: CustomPaint(
-                                      painter: isSelected ? _CornerTrianglePainter(primaryColor: primaryColor) : null,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: isSelected ? primaryColor : Colors.grey.shade300),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Container(
-                                              width: 30, height: 30,
-                                              decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(4)),
-                                              child: ClipRRect(
-                                                  borderRadius: BorderRadius.circular(4),
-                                                  child: Image.network(_bannerImages[0], fit: BoxFit.cover)
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(colorItem['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                                Text(_formatCurrency(colorItem['price']), style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                                              ],
-                                            )
-                                          ],
-                                        ),
+                                  // --- SỬA Ở ĐÂY: Thêm Transform.translate ---
+                                  if (originalPrice > currentPrice)
+                                    Transform.translate(
+                                      // Tùy chỉnh vị trí: Offset(ngang, dọc)
+                                      // Ví dụ: (0, -4) là giữ nguyên ngang, nhích lên trên 4 đơn vị
+                                      offset: const Offset(0, -4),
+                                      child: Text(
+                                        _formatCurrency(originalPrice),
+                                        style: const TextStyle(
+                                            fontSize: 16, color: Colors.grey, decoration: TextDecoration.lineThrough),
                                       ),
                                     ),
+                                  // ------------------------------------------
+                                ],
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // Tên sản phẩm
+                              Text(
+                                _productData!['name'],
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              // Rating & Yêu thích
+                              Row(
+                                children: [
+                                  ...List.generate(5, (index) {
+                                    if (index < ratingAverage.floor()) {
+                                      return const Icon(Icons.star, color: Colors.amber, size: 18);
+                                    } else if (index < ratingAverage) {
+                                      return const Icon(Icons.star_half, color: Colors.amber, size: 18);
+                                    }
+                                    return const Icon(Icons.star_border, color: Colors.amber, size: 18);
+                                  }),
+                                  const SizedBox(width: 5),
+                                  Text("($reviewCount)", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                                  const Spacer(),
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (user != null) {
+                                        _customerService.toggleFavoriteProduct(widget.productId);
+                                      }
+                                    },
+                                    child: Row(
+                                      children: [
+                                        Icon(isFavorite ? Icons.favorite : Icons.favorite_border,
+                                            color: Colors.red, size: 20),
+                                        const SizedBox(width: 4),
+                                        Text(isFavorite ? "Đã thích" : "Yêu thích",
+                                            style: const TextStyle(color: Colors.red, fontSize: 13)),
+                                      ],
+                                    ),
                                   ),
-                                );
-                              }),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  const SizedBox(height: 16),
-                  const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
-
-                  // 6. KHUYẾN MÃI & CAM KẾT
-                  _buildPromotionsAndCommitment(primaryColor, textRed),
-
-                  const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
-
-                  // 7. THÔNG SỐ KỸ THUẬT
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("Thông số kỹ thuật", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        const SizedBox(height: 12),
-                        Container(
-                          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade200)),
-                          child: Column(
-                            children: _specs.take(6).map((spec) => _buildSpecItem(spec['label'], spec['value'], _specs.indexOf(spec) % 2 == 0)).toList(),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        Center(
-                          child: OutlinedButton(
-                            onPressed: () {},
-                            style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.grey)),
-                            child: const Text("Xem cấu hình chi tiết", style: TextStyle(color: Colors.black)),
+
+                        // 3. THẺ ƯU ĐÃI
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: _buildOfferCard(primaryColor, textRed),
+                        ),
+
+                        const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
+
+                        // 4. PHIÊN BẢN (Variants)
+                        if (_versions.length > 1 || _versions[0] != 'Tiêu chuẩn')
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text("Chọn phiên bản",
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 10,
+                                  runSpacing: 10,
+                                  children: List.generate(_versions.length, (index) {
+                                    bool isSelected = _selectedVersionIndex == index;
+                                    return GestureDetector(
+                                      onTap: () => setState(() => _selectedVersionIndex = index),
+                                      child: CustomPaint(
+                                        painter: isSelected ? _CornerTrianglePainter(primaryColor: primaryColor) : null,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                                color: isSelected ? primaryColor : Colors.grey.shade300),
+                                          ),
+                                          child: Text(_versions[index],
+                                              style: TextStyle(
+                                                  color: isSelected ? primaryColor : Colors.black,
+                                                  fontWeight:
+                                                      isSelected ? FontWeight.bold : FontWeight.normal)),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ),
+                              ],
+                            ),
                           ),
-                        )
+
+                        // 5. MÀU SẮC
+                        if (_colors.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text("Chọn màu sắc",
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                const SizedBox(height: 10),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: List.generate(_colors.length, (index) {
+                                      bool isSelected = _selectedColorIndex == index;
+                                      var colorItem = _colors[index];
+                                      return GestureDetector(
+                                        onTap: () => setState(() => _selectedColorIndex = index),
+                                        child: Container(
+                                          margin: const EdgeInsets.only(right: 12),
+                                          child: CustomPaint(
+                                            painter: isSelected
+                                                ? _CornerTrianglePainter(primaryColor: primaryColor)
+                                                : null,
+                                            child: Container(
+                                              padding: const EdgeInsets.all(8),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                    color: isSelected ? primaryColor : Colors.grey.shade300),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Container(
+                                                    width: 30,
+                                                    height: 30,
+                                                    decoration: BoxDecoration(
+                                                        border: Border.all(color: Colors.grey.shade300),
+                                                        borderRadius: BorderRadius.circular(4)),
+                                                    child: ClipRRect(
+                                                        borderRadius: BorderRadius.circular(4),
+                                                        child: Image.network(_bannerImages[0],
+                                                            fit: BoxFit.cover)),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(colorItem['name'],
+                                                          style: const TextStyle(
+                                                              fontWeight: FontWeight.bold, fontSize: 12)),
+                                                      Text(_formatCurrency(colorItem['price']),
+                                                          style: const TextStyle(
+                                                              fontSize: 11, color: Colors.grey)),
+                                                    ],
+                                                  )
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                        const SizedBox(height: 16),
+                        const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
+
+                        // 6. KHUYẾN MÃI & CAM KẾT
+                        _buildPromotionsAndCommitment(primaryColor, textRed),
+
+                        const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
+
+                        // 7. THÔNG SỐ KỸ THUẬT
+                        Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Thông số kỹ thuật",
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              const SizedBox(height: 12),
+                              Container(
+                                decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade200)),
+                                child: Column(
+                                  children: _specs
+                                      .take(6)
+                                      .map((spec) => _buildSpecItem(
+                                          spec['label'], spec['value'], _specs.indexOf(spec) % 2 == 0))
+                                      .toList(),
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Center(
+                                child: OutlinedButton(
+                                  onPressed: () {},
+                                  style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.grey)),
+                                  child: const Text("Xem cấu hình chi tiết",
+                                      style: TextStyle(color: Colors.black)),
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+
+                        const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
+
+                        // 8. ĐẶC ĐIỂM NỔI BẬT: ĐÃ XÓA THEO YÊU CẦU
+
+                        // 9. ĐÁNH GIÁ SẢN PHẨM (Giao diện Mới)
+                        _buildProductRatingSection(primaryColor, ratingAverage, reviewCount),
+
+                        const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
+
+                        // 10. HỎI & ĐÁP
+                        _buildStaticSection(
+                            "Hỏi & Đáp",
+                            Column(
+                              children: [
+                                const TextField(
+                                  decoration: InputDecoration(
+                                    hintText: "Bạn có thắc mắc gì về sản phẩm?",
+                                    border: OutlineInputBorder(),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                    suffixIcon: Icon(Icons.send, color: Colors.red),
+                                  ),
+                                ),
+                                const SizedBox(height: 15),
+                                _buildQAItem("Q: Sản phẩm này có hỗ trợ trả góp không?",
+                                    "A: Dạ có ạ, bên em hỗ trợ trả góp 0% qua thẻ tín dụng."),
+                                const SizedBox(height: 10),
+                                _buildQAItem("Q: Bảo hành bao lâu?",
+                                    "A: Sản phẩm bảo hành chính hãng 12 tháng tại các trung tâm bảo hành trên toàn quốc."),
+                              ],
+                            )),
+                        const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
+
+                        // 11. TIN TỨC LIÊN QUAN
+                        _buildStaticSection(
+                            "Tin tức liên quan",
+                            Column(
+                              children: [
+                                // SỬ DỤNG ASSET ĐỊA PHƯƠNG
+                                _buildNewsItem("assets/images/tintuclienquan2.jpg",
+                                    "Đánh giá chi tiết hiệu năng sản phẩm: Quái vật cấu hình?"),
+                                const SizedBox(height: 10),
+                                _buildNewsItem("assets/images/tintuclienquan1.jpg",
+                                    "So sánh với phiên bản tiền nhiệm: Có đáng nâng cấp?"),
+                              ],
+                            )),
+
+                        const SizedBox(height: 20),
                       ],
                     ),
                   ),
+                ),
 
-                  const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
-
-                  // 8. ĐẶC ĐIỂM NỔI BẬT: ĐÃ XÓA THEO YÊU CẦU
-
-                  // 9. ĐÁNH GIÁ SẢN PHẨM (Giao diện Mới)
-                  _buildProductRatingSection(primaryColor, ratingAverage, reviewCount),
-
-                  const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
-
-                  // 10. HỎI & ĐÁP
-                  _buildStaticSection("Hỏi & Đáp",
-                      Column(
-                        children: [
-                          const TextField(
-                            decoration: InputDecoration(
-                              hintText: "Bạn có thắc mắc gì về sản phẩm?",
-                              border: OutlineInputBorder(),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                              suffixIcon: Icon(Icons.send, color: Colors.red),
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          _buildQAItem("Q: Sản phẩm này có hỗ trợ trả góp không?", "A: Dạ có ạ, bên em hỗ trợ trả góp 0% qua thẻ tín dụng."),
-                          const SizedBox(height: 10),
-                          _buildQAItem("Q: Bảo hành bao lâu?", "A: Sản phẩm bảo hành chính hãng 12 tháng tại các trung tâm bảo hành trên toàn quốc."),
-                        ],
-                      )
-                  ),
-                  const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
-
-                  // 11. TIN TỨC LIÊN QUAN
-                  _buildStaticSection("Tin tức liên quan",
-                      Column(
-                        children: [
-                          // SỬ DỤNG ASSET ĐỊA PHƯƠNG
-                          _buildNewsItem("assets/images/tintuclienquan2.jpg", "Đánh giá chi tiết hiệu năng sản phẩm: Quái vật cấu hình?"),
-                          const SizedBox(height: 10),
-                          _buildNewsItem("assets/images/tintuclienquan1.jpg", "So sánh với phiên bản tiền nhiệm: Có đáng nâng cấp?"),
-                        ],
-                      )
-                  ),
-
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
-
-          // BOTTOM BAR (Đã chỉnh sửa bỏ liên hệ)
-          _buildBottomBar(primaryColor),
-        ],
-      ),
+                // BOTTOM BAR (Đã chỉnh sửa bỏ liên hệ)
+                _buildBottomBar(primaryColor),
+              ],
+            );
+          }),
     );
   }
 
@@ -570,9 +625,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
           const SizedBox(height: 10),
 
-          _buildExperienceRating('Hiệu năng', '5.0/5', (count/2).toInt()),
-          _buildExperienceRating('Thời lượng pin', '4.8/5', (count/2).toInt()),
-          _buildExperienceRating('Chất lượng camera', '4.9/5', (count/2).toInt()),
+          _buildExperienceRating('Hiệu năng', '5.0/5', (count / 2).toInt()),
+          _buildExperienceRating('Thời lượng pin', '4.8/5', (count / 2).toInt()),
+          _buildExperienceRating('Chất lượng camera', '4.9/5', (count / 2).toInt()),
         ],
       ),
     );
@@ -814,7 +869,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          width: 120, height: 120,
+                          width: 120,
+                          height: 120,
                           margin: const EdgeInsets.only(right: 15),
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -826,7 +882,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             child: Image.network(
                               _bannerImages[_currentImageIndex],
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
                             ),
                           ),
                         ),
@@ -836,12 +893,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             children: [
                               if (_featureHighlights.isEmpty)
                                 _buildFeatureItem("Thông tin sản phẩm đang cập nhật..."),
-
                               if (_featureHighlights.isNotEmpty)
                                 ..._featureHighlights.take(3).map((text) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 6.0),
-                                  child: _buildFeatureItem(text),
-                                )).toList(),
+                                      padding: const EdgeInsets.only(bottom: 6.0),
+                                      child: _buildFeatureItem(text),
+                                    ))
+                                    .toList(),
                             ],
                           ),
                         ),
@@ -854,9 +911,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ),
               Positioned(
-                right: 10, top: 105,
+                right: 10,
+                top: 105,
                 child: GestureDetector(
-                  onTap: () => setState(() => _currentImageIndex = (_currentImageIndex + 1) % _bannerImages.length),
+                  onTap: () =>
+                      setState(() => _currentImageIndex = (_currentImageIndex + 1) % _bannerImages.length),
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(color: Colors.white.withOpacity(0.7), shape: BoxShape.circle),
@@ -955,20 +1014,27 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Row(
       children: [
         Container(
-          width: 80, height: 50,
+          width: 80,
+          height: 50,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(5), color: Colors.grey[200]),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(5),
-            child: Image.asset( // <<< ĐÃ SỬA TỪ Image.network THÀNH Image.asset
+            child: Image.asset(
+              // <<< ĐÃ SỬA TỪ Image.network THÀNH Image.asset
               imagePath,
               fit: BoxFit.cover,
               // Thêm errorBuilder để xử lý trường hợp không tìm thấy ảnh
-              errorBuilder: (context, error, stackTrace) => const Center(child: Icon(Icons.image_not_supported, color: Colors.grey)),
+              errorBuilder: (context, error, stackTrace) =>
+                  const Center(child: Icon(Icons.image_not_supported, color: Colors.grey)),
             ),
           ),
         ),
         const SizedBox(width: 10),
-        Expanded(child: Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), maxLines: 2, overflow: TextOverflow.ellipsis)),
+        Expanded(
+            child: Text(title,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis)),
       ],
     );
   }
@@ -980,7 +1046,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 20, height: 20, alignment: Alignment.center,
+            width: 20,
+            height: 20,
+            alignment: Alignment.center,
             decoration: const BoxDecoration(color: Color(0xFFFA661B), shape: BoxShape.circle),
             child: Text(number, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
           ),
@@ -1022,11 +1090,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget _buildBottomBar(Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, -5))]),
+      decoration: BoxDecoration(
+          color: Colors.white, boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, -5))]),
       child: Row(
         children: [
-          // Bỏ nút Liên hệ ở đây
-
+          // Widget chọn số lượng
+          Row(
+            children: [
+              _buildQuantityButton(Icons.remove, () {
+                if (_quantity > 1) {
+                  setState(() => _quantity--);
+                }
+              }),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text('$_quantity', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+              _buildQuantityButton(Icons.add, () => setState(() => _quantity++)),
+            ],
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Container(
               height: 45,
@@ -1039,11 +1122,41 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
           const SizedBox(width: 10),
           Container(
-            height: 45, width: 45,
+            height: 45,
+            width: 45,
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), border: Border.all(color: primaryColor, width: 1.5)),
-            child: IconButton(icon: Icon(Icons.shopping_cart_outlined, color: primaryColor, size: 24), onPressed: () {}),
+            child: IconButton(
+              icon: Icon(Icons.shopping_cart_outlined, color: primaryColor, size: 24),
+              onPressed: () async {
+                try {
+                  await _customerService.addToCart(widget.productId, _quantity);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Đã thêm vào giỏ hàng!')),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Lỗi: ${e.toString()}')),
+                  );
+                }
+              },
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuantityButton(IconData icon, VoidCallback onPressed) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Icon(icon, size: 18),
       ),
     );
   }
@@ -1055,9 +1168,14 @@ class _CornerTrianglePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = primaryColor;
-    final path = Path()..moveTo(size.width, 0)..lineTo(size.width - 15, 0)..lineTo(size.width, 15)..close();
+    final path = Path()
+      ..moveTo(size.width, 0)
+      ..lineTo(size.width - 15, 0)
+      ..lineTo(size.width, 15)
+      ..close();
     canvas.drawPath(path, paint);
   }
+
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

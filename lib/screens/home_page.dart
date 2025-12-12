@@ -1,4 +1,6 @@
+import 'package:ecmobile/models/customer_model.dart';
 import 'package:ecmobile/screens/product_detail.dart';
+import 'package:ecmobile/services/customer_service.dart';
 import 'package:flutter/material.dart' hide CarouselController;
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,6 +9,7 @@ import 'flash_sale_page.dart';
 import 'order_history_page.dart';
 import 'event_page.dart';
 import 'product_list_page.dart';
+import 'membership_rules_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -16,27 +19,21 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // --- MÀU CHỦ ĐẠO (Đã sửa theo yêu cầu) ---
+  final CustomerService _customerService = CustomerService();
   final Color primaryColor = const Color(0xFFFA661B);
 
-  // --- STATE QUẢN LÝ CHỈ SỐ TRANG ---
   int _currentImageIndex = 0;
   int _currentCategoryIndex = 0;
-
-  // State cho các slider sản phẩm
   int _currentPhonePageIndex = 0;
   int _currentLaptopPageIndex = 0;
   int _currentAudioPageIndex = 0;
   int _currentMonitorPageIndex = 0;
   int _currentFavoritePageIndex = 0;
 
-  // State lọc
   int _selectedPhoneChip = -1;
   int _selectedLaptopChip = -1;
   int _selectedAudioChip = -1;
   int _selectedMonitorChip = -1;
-
-  List<Map<String, dynamic>> _favoriteProducts = [];
 
   late Stream<QuerySnapshot> _phoneStream;
   late Stream<QuerySnapshot> _laptopStream;
@@ -50,22 +47,6 @@ class _HomePageState extends State<HomePage> {
     _laptopStream = _createStream('cate_laptop', _selectedLaptopChip, ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell']);
     _audioStream = _createStream('cate_audio', _selectedAudioChip, ['Sony', 'JBL', 'Apple', 'Marshall']);
     _monitorStream = _createStream('cate_monitor', _selectedMonitorChip, ['LG', 'Samsung', 'Asus', 'MSI']);
-  }
-
-  bool _isProductFavorite(String id) {
-    return _favoriteProducts.any((item) => item['id'] == id);
-  }
-
-  void _toggleFavorite(Map<String, dynamic> productData) {
-    setState(() {
-      String id = productData['id'];
-      if (_isProductFavorite(id)) {
-        _favoriteProducts.removeWhere((item) => item['id'] == id);
-        if (_favoriteProducts.isEmpty) _currentFavoritePageIndex = 0;
-      } else {
-        _favoriteProducts.add(productData);
-      }
-    });
   }
 
   Stream<QuerySnapshot> _createStream(String categoryId, int selectedIndex, List<String> brands) {
@@ -126,89 +107,102 @@ class _HomePageState extends State<HomePage> {
     double itemHeight = itemWidth / childAspectRatio;
     double sliderHeight = (itemHeight * 2) + 16.0 + 40.0;
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildTopMenu(),
-          _buildImageCarousel(),
-          _buildSectionHeader(title: 'SẢN PHẨM NỔI BẬT', onSeeMore: () {}),
-          _buildFilterChips(),
-          _buildFavoriteSection(sliderHeight: sliderHeight, aspectRatio: childAspectRatio),
-          _buildAdBanner('https://cdn.tgdd.vn/Products/Images/522/294104/Slider/ipad-pro-m2-11-inch638035032348738269.jpg'),
-          _buildCategorySlider(),
+    return StreamBuilder<CustomerModel?>(
+        stream: _customerService.getUserStream(),
+        builder: (context, snapshot) {
+          final user = snapshot.data;
 
-          _buildFirebaseSection(
-            title: 'ĐIỆN THOẠI',
-            stream: _phoneStream,
-            filterBrands: ['Apple', 'Samsung', 'Xiaomi', 'Vivo'],
-            sliderHeight: sliderHeight,
-            aspectRatio: childAspectRatio,
-            selectedIndex: _selectedPhoneChip,
-            pageIndex: _currentPhonePageIndex,
-            onChipSelected: (index) => setState(() {
-              _selectedPhoneChip = (_selectedPhoneChip == index) ? -1 : index;
-              _currentPhonePageIndex = 0;
-              _phoneStream = _createStream('cate_phone', _selectedPhoneChip, ['Apple', 'Samsung', 'Xiaomi', 'Vivo']);
-            }),
-            onPageChanged: (index) => setState(() => _currentPhonePageIndex = index),
-          ),
-
-          _buildFirebaseSection(
-            title: 'LAPTOP',
-            stream: _laptopStream,
-            filterBrands: ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell'],
-            sliderHeight: sliderHeight,
-            aspectRatio: childAspectRatio,
-            selectedIndex: _selectedLaptopChip,
-            pageIndex: _currentLaptopPageIndex,
-            onChipSelected: (index) => setState(() {
-              _selectedLaptopChip = (_selectedLaptopChip == index) ? -1 : index;
-              _currentLaptopPageIndex = 0;
-              _laptopStream = _createStream('cate_laptop', _selectedLaptopChip, ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell']);
-            }),
-            onPageChanged: (index) => setState(() => _currentLaptopPageIndex = index),
-          ),
-
-          _buildFirebaseSection(
-            title: 'LOA / TAI NGHE',
-            stream: _audioStream,
-            filterBrands: ['Sony', 'JBL', 'Apple', 'Marshall'],
-            sliderHeight: sliderHeight,
-            aspectRatio: childAspectRatio,
-            selectedIndex: _selectedAudioChip,
-            pageIndex: _currentAudioPageIndex,
-            onChipSelected: (index) => setState(() {
-              _selectedAudioChip = (_selectedAudioChip == index) ? -1 : index;
-              _currentAudioPageIndex = 0;
-              _audioStream = _createStream('cate_audio', _selectedAudioChip, ['Sony', 'JBL', 'Apple', 'Marshall']);
-            }),
-            onPageChanged: (index) => setState(() => _currentAudioPageIndex = index),
-          ),
-
-          _buildFirebaseSection(
-            title: 'MÀN HÌNH',
-            stream: _monitorStream,
-            filterBrands: ['LG', 'Samsung', 'Asus', 'MSI'],
-            sliderHeight: sliderHeight,
-            aspectRatio: childAspectRatio,
-            selectedIndex: _selectedMonitorChip,
-            pageIndex: _currentMonitorPageIndex,
-            onChipSelected: (index) => setState(() {
-              _selectedMonitorChip = (_selectedMonitorChip == index) ? -1 : index;
-              _currentMonitorPageIndex = 0;
-              _monitorStream = _createStream('cate_monitor', _selectedMonitorChip, ['LG', 'Samsung', 'Asus', 'MSI']);
-            }),
-            onPageChanged: (index) => setState(() => _currentMonitorPageIndex = index),
-          ),
-          SizedBox(height: 16),
-        ],
-      ),
-    );
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTopMenu(user),
+                _buildImageCarousel(),
+                _buildSectionHeader(title: 'SẢN PHẨM NỔI BẬT', onSeeMore: () {}),
+                _buildFilterChips(),
+                if (user != null)
+                  _buildFavoriteSection(
+                      user: user,
+                      sliderHeight: sliderHeight,
+                      aspectRatio: childAspectRatio),
+                _buildAdBanner(
+                    'https://cdn.tgdd.vn/Products/Images/522/294104/Slider/ipad-pro-m2-11-inch638035032348738269.jpg'),
+                _buildCategorySlider(),
+                _buildFirebaseSection(
+                  user: user,
+                  title: 'ĐIỆN THOẠI',
+                  stream: _phoneStream,
+                  filterBrands: ['Apple', 'Samsung', 'Xiaomi', 'Vivo'],
+                  sliderHeight: sliderHeight,
+                  aspectRatio: childAspectRatio,
+                  selectedIndex: _selectedPhoneChip,
+                  pageIndex: _currentPhonePageIndex,
+                  onChipSelected: (index) => setState(() {
+                    _selectedPhoneChip = (_selectedPhoneChip == index) ? -1 : index;
+                    _currentPhonePageIndex = 0;
+                    _phoneStream =
+                        _createStream('cate_phone', _selectedPhoneChip, ['Apple', 'Samsung', 'Xiaomi', 'Vivo']);
+                  }),
+                  onPageChanged: (index) => setState(() => _currentPhonePageIndex = index),
+                ),
+                _buildFirebaseSection(
+                  user: user,
+                  title: 'LAPTOP',
+                  stream: _laptopStream,
+                  filterBrands: ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell'],
+                  sliderHeight: sliderHeight,
+                  aspectRatio: childAspectRatio,
+                  selectedIndex: _selectedLaptopChip,
+                  pageIndex: _currentLaptopPageIndex,
+                  onChipSelected: (index) => setState(() {
+                    _selectedLaptopChip = (_selectedLaptopChip == index) ? -1 : index;
+                    _currentLaptopPageIndex = 0;
+                    _laptopStream =
+                        _createStream('cate_laptop', _selectedLaptopChip, ['HP', 'Lenovo', 'Asus', 'Acer', 'MSI', 'Dell']);
+                  }),
+                  onPageChanged: (index) => setState(() => _currentLaptopPageIndex = index),
+                ),
+                _buildFirebaseSection(
+                  user: user,
+                  title: 'LOA / TAI NGHE',
+                  stream: _audioStream,
+                  filterBrands: ['Sony', 'JBL', 'Apple', 'Marshall'],
+                  sliderHeight: sliderHeight,
+                  aspectRatio: childAspectRatio,
+                  selectedIndex: _selectedAudioChip,
+                  pageIndex: _currentAudioPageIndex,
+                  onChipSelected: (index) => setState(() {
+                    _selectedAudioChip = (_selectedAudioChip == index) ? -1 : index;
+                    _currentAudioPageIndex = 0;
+                    _audioStream = _createStream('cate_audio', _selectedAudioChip, ['Sony', 'JBL', 'Apple', 'Marshall']);
+                  }),
+                  onPageChanged: (index) => setState(() => _currentAudioPageIndex = index),
+                ),
+                _buildFirebaseSection(
+                  user: user,
+                  title: 'MÀN HÌNH',
+                  stream: _monitorStream,
+                  filterBrands: ['LG', 'Samsung', 'Asus', 'MSI'],
+                  sliderHeight: sliderHeight,
+                  aspectRatio: childAspectRatio,
+                  selectedIndex: _selectedMonitorChip,
+                  pageIndex: _currentMonitorPageIndex,
+                  onChipSelected: (index) => setState(() {
+                    _selectedMonitorChip = (_selectedMonitorChip == index) ? -1 : index;
+                    _currentMonitorPageIndex = 0;
+                    _monitorStream =
+                        _createStream('cate_monitor', _selectedMonitorChip, ['LG', 'Samsung', 'Asus', 'MSI']);
+                  }),
+                  onPageChanged: (index) => setState(() => _currentMonitorPageIndex = index),
+                ),
+                SizedBox(height: 16),
+              ],
+            ),
+          );
+        });
   }
 
-  // --- [ĐÃ SỬA HOÀN TOÀN] MENU CHÍNH ---
-  Widget _buildTopMenu() {
+  Widget _buildTopMenu(CustomerModel? user) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       decoration: BoxDecoration(
@@ -228,10 +222,13 @@ class _HomePageState extends State<HomePage> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Expanded chỉ nằm ở đây (cha) là đúng chuẩn
           Expanded(
             child: _buildMenuItem(Icons.diamond, 'Hạng thành viên', () {
-              print("Bấm Hạng thành viên");
+                if (user != null) {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => MembershipRulesPage(currentRank: user.membershipRank)));
+                } else {
+                    // Show a message or navigate to login
+                }
             }),
           ),
           Expanded(
@@ -287,64 +284,81 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildFavoriteSection({required double sliderHeight, required double aspectRatio}) {
-    if (_favoriteProducts.isEmpty) return SizedBox.shrink();
-    final favoritePages = _chunkList(_favoriteProducts, 4);
+  Widget _buildFavoriteSection(
+      {required CustomerModel user, required double sliderHeight, required double aspectRatio}) {
+    if (user.favoriteProducts.isEmpty) return SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
-          child: Row(
+    return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('products')
+            .where(FieldPath.documentId, whereIn: user.favoriteProducts)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return SizedBox.shrink();
+          final favoriteProducts = snapshot.data!.docs;
+          if (favoriteProducts.isEmpty) return SizedBox.shrink();
+
+          final favoritePages = _chunkList(favoriteProducts, 4);
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.favorite, color: Colors.red),
-              SizedBox(width: 8),
-              Text('SẢN PHẨM YÊU THÍCH', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
-            ],
-          ),
-        ),
-        CarouselSlider(
-          options: CarouselOptions(
-            initialPage: 0,
-            height: sliderHeight,
-            viewportFraction: 1.0,
-            enableInfiniteScroll: false,
-            onPageChanged: (index, reason) => setState(() => _currentFavoritePageIndex = index),
-          ),
-          items: favoritePages.map((pageItems) {
-            return GridView.builder(
-              padding: const EdgeInsets.all(16.0),
-              physics: NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16.0,
-                mainAxisSpacing: 16.0,
-                childAspectRatio: aspectRatio,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.favorite, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('SẢN PHẨM YÊU THÍCH',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.red)),
+                  ],
+                ),
               ),
-              itemCount: pageItems.length,
-              itemBuilder: (context, index) {
-                final data = pageItems[index] as Map<String, dynamic>;
-                return ProductCard(
-                  data: data,
-                  isFavorite: true,
-                  onToggleFavorite: () => _toggleFavorite(data),
-                );
-              },
-            );
-          }).toList(),
-        ),
-        if (favoritePages.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10.0),
-            child: _buildScrollIndicator(currentIndex: _currentFavoritePageIndex, totalCount: favoritePages.length),
-          ),
-        Divider(thickness: 4, color: Colors.grey.shade100),
-      ],
-    );
+              CarouselSlider(
+                options: CarouselOptions(
+                  initialPage: 0,
+                  height: sliderHeight,
+                  viewportFraction: 1.0,
+                  enableInfiniteScroll: false,
+                  onPageChanged: (index, reason) => setState(() => _currentFavoritePageIndex = index),
+                ),
+                items: favoritePages.map((pageItems) {
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(16.0),
+                    physics: NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16.0,
+                      mainAxisSpacing: 16.0,
+                      childAspectRatio: aspectRatio,
+                    ),
+                    itemCount: pageItems.length,
+                    itemBuilder: (context, index) {
+                      final doc = pageItems[index] as QueryDocumentSnapshot;
+                      final data = {...doc.data() as Map<String, dynamic>, 'id': doc.id};
+                      return ProductCard(
+                        data: data,
+                        isFavorite: true,
+                        onToggleFavorite: () => _customerService.toggleFavoriteProduct(data['id']),
+                      );
+                    },
+                  );
+                }).toList(),
+              ),
+              if (favoritePages.length > 1)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10.0),
+                  child:
+                      _buildScrollIndicator(currentIndex: _currentFavoritePageIndex, totalCount: favoritePages.length),
+                ),
+              Divider(thickness: 4, color: Colors.grey.shade100),
+            ],
+          );
+        });
   }
 
   Widget _buildFirebaseSection({
+    CustomerModel? user,
     required String title,
     required Stream<QuerySnapshot> stream,
     required List<String> filterBrands,
@@ -393,7 +407,8 @@ class _HomePageState extends State<HomePage> {
               return Container(height: sliderHeight, child: Center(child: CircularProgressIndicator()));
             }
             final products = snapshot.data!.docs;
-            if (products.isEmpty) return Container(height: 200, child: Center(child: Text("Chưa có sản phẩm nào")));
+            if (products.isEmpty)
+              return Container(height: 200, child: Center(child: Text("Chưa có sản phẩm nào")));
 
             final productPages = _chunkList(products, 4);
 
@@ -421,10 +436,15 @@ class _HomePageState extends State<HomePage> {
                       itemBuilder: (context, index) {
                         final doc = pageDocs[index] as QueryDocumentSnapshot;
                         final data = {...doc.data() as Map<String, dynamic>, 'id': doc.id};
+                        final isFavorite = user?.favoriteProducts.contains(data['id']) ?? false;
                         return ProductCard(
                           data: data,
-                          isFavorite: _isProductFavorite(data['id']),
-                          onToggleFavorite: () => _toggleFavorite(data),
+                          isFavorite: isFavorite,
+                          onToggleFavorite: () {
+                            if (user != null) {
+                              _customerService.toggleFavoriteProduct(data['id']);
+                            }
+                          },
                         );
                       },
                     );
@@ -497,13 +517,15 @@ class _HomePageState extends State<HomePage> {
             enlargeCenterPage: true,
             onPageChanged: (index, reason) => setState(() => _currentImageIndex = index),
           ),
-          items: imgList.map((item) => Container(
-            child: Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.all(Radius.circular(12.0)),
-                  child: Image.network(item, fit: BoxFit.cover, width: 1000.0),
-                )),
-          )).toList(),
+          items: imgList
+              .map((item) => Container(
+                    child: Center(
+                        child: ClipRRect(
+                      borderRadius: BorderRadius.all(Radius.circular(12.0)),
+                      child: Image.network(item, fit: BoxFit.cover, width: 1000.0),
+                    )),
+                  ))
+              .toList(),
         ),
         SizedBox(height: 10),
         _buildDashIndicator(currentIndex: _currentImageIndex, totalCount: imgList.length),
@@ -702,10 +724,12 @@ class _HomePageState extends State<HomePage> {
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
-        children: filters.map((filter) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
-          child: ActionChip(label: Text(filter), onPressed: () {}, backgroundColor: Colors.grey.shade200),
-        )).toList(),
+        children: filters
+            .map((filter) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  child: ActionChip(label: Text(filter), onPressed: () {}, backgroundColor: Colors.grey.shade200),
+                ))
+            .toList(),
       ),
     );
   }
@@ -726,7 +750,8 @@ class ProductCard extends StatelessWidget {
   final bool isFavorite;
   final VoidCallback onToggleFavorite;
 
-  const ProductCard({Key? key, required this.data, required this.isFavorite, required this.onToggleFavorite}) : super(key: key);
+  const ProductCard({Key? key, required this.data, required this.isFavorite, required this.onToggleFavorite})
+      : super(key: key);
 
   String formatCurrency(num price) {
     final format = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
@@ -738,7 +763,8 @@ class ProductCard extends StatelessWidget {
       margin: const EdgeInsets.only(top: 4.0),
       padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
       decoration: BoxDecoration(color: Colors.orange.shade200, borderRadius: BorderRadius.circular(4.0)),
-      child: Text(text, style: TextStyle(fontSize: 10, color: Colors.grey.shade700), maxLines: 1, overflow: TextOverflow.ellipsis),
+      child: Text(text,
+          style: TextStyle(fontSize: 10, color: Colors.grey.shade700), maxLines: 1, overflow: TextOverflow.ellipsis),
     );
   }
 
@@ -747,7 +773,9 @@ class ProductCard extends StatelessWidget {
     final Color primaryColor = const Color(0xFFFA661B);
     String name = data['name'] ?? 'Sản phẩm';
     num rawPrice = data['basePrice'] ?? 0;
-    String imageUrl = (data['images'] != null && (data['images'] as List).isNotEmpty) ? (data['images'] as List)[0] : 'https://via.placeholder.com/150';
+    String imageUrl = (data['images'] != null && (data['images'] as List).isNotEmpty)
+        ? (data['images'] as List)[0]
+        : 'https://via.placeholder.com/150';
     String specs = data['description'] ?? '';
     num oldPrice = data['originalPrice'] ?? (rawPrice * 1.1);
     double rating = (data['ratingAverage'] is num) ? (data['ratingAverage'] as num).toDouble() : 4.5;
@@ -776,10 +804,31 @@ class ProductCard extends StatelessWidget {
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
-                  child: Image.network(imageUrl, height: 150, width: double.infinity, fit: BoxFit.contain, errorBuilder: (ctx, err, stack) => Container(height: 150, color: Colors.grey.shade200, child: Icon(Icons.broken_image, color: Colors.grey.shade400))),
+                  child: Image.network(imageUrl,
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                      errorBuilder: (ctx, err, stack) => Container(
+                          height: 150, color: Colors.grey.shade200, child: Icon(Icons.broken_image, color: Colors.grey.shade400))),
                 ),
-                Positioned(top: 8, left: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(4)), child: Text('Trả góp 0%', style: TextStyle(color: Colors.blue.shade800, fontSize: 10, fontWeight: FontWeight.bold)))),
-                Positioned(top: 8, right: 8, child: Container(padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(4)), child: Text('Giảm 10%', style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold)))),
+                Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration:
+                            BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(4)),
+                        child: Text('Trả góp 0%',
+                            style: TextStyle(color: Colors.blue.shade800, fontSize: 10, fontWeight: FontWeight.bold)))),
+                Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration:
+                            BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(4)),
+                        child: Text('Giảm 10%',
+                            style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold)))),
               ],
             ),
             Expanded(
@@ -788,12 +837,21 @@ class ProductCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(child: Text(name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor), maxLines: 2, overflow: TextOverflow.ellipsis)),
+                    Flexible(
+                        child: Text(name,
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis)),
                     SizedBox(height: 5),
-                    Text(specs, style: TextStyle(fontSize: 12, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(specs,
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                     SizedBox(height: 2),
-                    Text(formatCurrency(rawPrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text(formatCurrency(oldPrice), style: TextStyle(color: Colors.grey.shade500, decoration: TextDecoration.lineThrough, fontSize: 12)),
+                    Text(formatCurrency(rawPrice),
+                        style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(formatCurrency(oldPrice),
+                        style: TextStyle(color: Colors.grey.shade500, decoration: TextDecoration.lineThrough, fontSize: 12)),
                     SizedBox(height: 4),
                     _buildPromoTag('Tặng gói Google AI 1 năm'),
                     _buildPromoTag('Trả góp 0% qua thẻ'),
@@ -801,8 +859,17 @@ class ProductCard extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(children: [Icon(Icons.star, color: Colors.amber, size: 16), SizedBox(width: 4), Text(rating.toString(), style: TextStyle(fontSize: 12))]),
-                        IconButton(icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? Colors.red : Colors.grey, size: 20), onPressed: onToggleFavorite, padding: EdgeInsets.zero, constraints: BoxConstraints()),
+                        Row(children: [
+                          Icon(Icons.star, color: Colors.amber, size: 16),
+                          SizedBox(width: 4),
+                          Text(rating.toString(), style: TextStyle(fontSize: 12))
+                        ]),
+                        IconButton(
+                            icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border,
+                                color: isFavorite ? Colors.red : Colors.grey, size: 20),
+                            onPressed: onToggleFavorite,
+                            padding: EdgeInsets.zero,
+                            constraints: BoxConstraints()),
                       ],
                     ),
                   ],

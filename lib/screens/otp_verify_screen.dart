@@ -1,5 +1,3 @@
-// lib/screens/otp_verify_screen.dart
-
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -11,12 +9,14 @@ class OtpVerifyScreen extends StatefulWidget {
   final String email;
   final String generatedOTP;
   final Map<String, dynamic> userData;
+  final String password;
 
   const OtpVerifyScreen({
     super.key,
     required this.email,
     required this.generatedOTP,
     required this.userData,
+    required this.password,
   });
 
   @override
@@ -123,7 +123,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
     try {
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: widget.email,
-        password: widget.userData['password'],
+        password: widget.password, // Use the passed password
       );
 
       if (userCredential.user != null) {
@@ -140,7 +140,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
           "phoneNumber": widget.userData['phoneNumber'] ?? "",
           "gender": "Nam",
           "address": "Hẻm 78 Tôn Thất Thuyết Phường 16 Quận 4",
-          "password": widget.userData['password'],
+          // The password field is removed for security
           "membershipRank": "Đồng",
           "isStudent": true,
           "studentRequestStatus": "pending",
@@ -197,7 +197,6 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
               const SizedBox(height: 30),
 
-              // Đã cập nhật đúng đường dẫn asset và xóa icon thừa
               Image.asset(
                 'assets/images/verify.png',
                 height: 300,
@@ -212,7 +211,6 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
               const SizedBox(height: 30),
 
-              // 6 Ô nhập
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: List.generate(6, (index) => SizedBox(
@@ -243,7 +241,6 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
 
               const SizedBox(height: 20),
 
-              // Bộ đếm ngược gửi lại mã
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

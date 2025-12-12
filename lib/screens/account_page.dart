@@ -9,6 +9,8 @@ import 'package:ecmobile/screens/student_verify_page.dart';
 import 'package:ecmobile/screens/user_info_page.dart';
 import 'package:ecmobile/screens/membership_rules_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ecmobile/screens/forgot_password_screen.dart'; // Import forgot password screen
+import 'package:ecmobile/screens/favorite_products_page.dart'; // Import favorite products page
 
 class AccountPage extends StatefulWidget {
   const AccountPage({Key? key}) : super(key: key);
@@ -26,20 +28,44 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   Future<void> _handleLogout() async {
-    // Sign out from Google
     await GoogleAuthService.signOut();
-
-    // Clear saved email
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove('user_email');
-
-    // Navigate to LoginScreen
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
         (route) => false,
       );
+    }
+  }
+
+  Map<String, dynamic> _getRankProperties(String rank) {
+    switch (rank.toLowerCase()) {
+      case 'đồng':
+        return {
+          'icon': Icons.shield,
+          'color': Colors.brown,
+          'backgroundColor': Colors.brown.withOpacity(0.1),
+        };
+      case 'bạc':
+        return {
+          'icon': Icons.shield,
+          'color': Colors.grey[600],
+          'backgroundColor': Colors.grey.withOpacity(0.1),
+        };
+      case 'vàng':
+        return {
+          'icon': Icons.star,
+          'color': Colors.amber,
+          'backgroundColor': Colors.amber.withOpacity(0.1),
+        };
+      default:
+        return {
+          'icon': Icons.shield,
+          'color': Colors.grey,
+          'backgroundColor': Colors.grey.withOpacity(0.1),
+        };
     }
   }
 
@@ -53,13 +79,10 @@ class _AccountPageState extends State<AccountPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (snapshot.hasError || !snapshot.hasData) {
             return const Center(child: Text("Không tải được thông tin tài khoản"));
           }
-
           final user = snapshot.data!;
-
           return SingleChildScrollView(
             child: Column(
               children: [
@@ -79,19 +102,20 @@ class _AccountPageState extends State<AccountPage> {
   }
 
   Widget _buildHeader(CustomerModel user) {
+    final rankProperties = _getRankProperties(user.membershipRank);
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(16, 48, 16, 24),
       child: Row(
         children: [
           Container(
-            width: 70,
-            height: 70,
+            width: 85,
+            height: 85,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: Colors.grey[200]!, width: 2),
               image: const DecorationImage(
-                image: NetworkImage("https://i.pravatar.cc/300?img=12"),
+                image: AssetImage('assets/images/nonchalant.jpg'),
                 fit: BoxFit.cover,
               ),
             ),
@@ -121,21 +145,21 @@ class _AccountPageState extends State<AccountPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
+                    color: rankProperties['backgroundColor'],
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFFFC107)),
+                    border: Border.all(color: rankProperties['color']),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.diamond_outlined, size: 14, color: Color(0xFFFFC107)),
+                      Icon(rankProperties['icon'], size: 14, color: rankProperties['color']),
                       const SizedBox(width: 4),
                       Text(
                         user.membershipRank,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF8F00),
+                          color: rankProperties['color'],
                         ),
                       ),
                     ],
@@ -145,7 +169,14 @@ class _AccountPageState extends State<AccountPage> {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserInfoPage(user: user),
+                ),
+              );
+            },
             icon: const Icon(Icons.edit_outlined, color: AppColors.textSecondary),
           )
         ],
@@ -211,7 +242,6 @@ class _AccountPageState extends State<AccountPage> {
 
   Widget _buildMenuSection(CustomerModel user) {
     const divider = Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE));
-
     return Container(
       color: Colors.white,
       child: Column(
@@ -276,20 +306,26 @@ class _AccountPageState extends State<AccountPage> {
           _buildMenuItem(
             icon: Icons.favorite_border,
             title: "Sản phẩm yêu thích",
-            trailingText: "12",
-            onTap: () {},
-          ),
-          divider,
-          _buildMenuItem(
-            icon: Icons.history,
-            title: "Đã xem gần đây",
-            onTap: () {},
+            trailingText: "${user.favoriteProducts.length}", 
+            onTap: () {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const FavoriteProductsPage()));
+            },
           ),
           divider,
           _buildMenuItem(
             icon: Icons.lock_outline,
             title: "Đổi mật khẩu",
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ForgotPasswordScreen(),
+                ),
+              );
+            },
           ),
           divider,
           _buildMenuItem(
@@ -314,7 +350,7 @@ class _AccountPageState extends State<AccountPage> {
     required String title,
     String? subtitle,
     String? trailingText,
-    required VoidCallback onTap
+    required VoidCallback onTap,
   }) {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -327,12 +363,16 @@ class _AccountPageState extends State<AccountPage> {
         child: Icon(icon, color: const Color(0xFFFA661B), size: 20),
       ),
       title: Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
-      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)) : null,
+      subtitle: subtitle != null
+          ? Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey))
+          : null,
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (trailingText != null)
-            Text(trailingText, style: const TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500)),
+            Text(trailingText,
+                style: const TextStyle(
+                    fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500)),
           const SizedBox(width: 8),
           const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
         ],
@@ -354,7 +394,8 @@ class _AccountPageState extends State<AccountPage> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             foregroundColor: Colors.red,
           ),
-          child: const Text("Đăng xuất", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          child: const Text("Đăng xuất",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),
       ),
     );

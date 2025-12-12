@@ -113,7 +113,7 @@ class _UserInfoPageState extends State<UserInfoPage> {
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.grey[200]!, width: 2),
                         image: const DecorationImage(
-                          image: NetworkImage("https://i.pravatar.cc/300?img=12"),
+                          image: AssetImage('assets/images/nonchalant.jpg'), // Use local asset
                           fit: BoxFit.cover,
                         ),
                       ),

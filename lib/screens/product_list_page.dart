@@ -1,4 +1,6 @@
+import 'package:ecmobile/models/customer_model.dart';
 import 'package:ecmobile/screens/product_detail.dart';
+import 'package:ecmobile/services/customer_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -21,6 +23,7 @@ class ProductListPage extends StatefulWidget {
 }
 
 class _ProductListPageState extends State<ProductListPage> {
+  final CustomerService _customerService = CustomerService();
   final Color primaryColor = const Color(0xFFFA661B);
 
   // Filter states
@@ -99,14 +102,19 @@ class _ProductListPageState extends State<ProductListPage> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          _buildPromotionalBanner(),
-          _buildFilterTabs(),
-          _buildSortAndFilterBar(),
-          Expanded(child: _buildProductGrid()),
-        ],
-      ),
+      body: StreamBuilder<CustomerModel?>(
+          stream: _customerService.getUserStream(),
+          builder: (context, snapshot) {
+            final user = snapshot.data;
+            return Column(
+              children: [
+                _buildPromotionalBanner(),
+                _buildFilterTabs(),
+                _buildSortAndFilterBar(),
+                Expanded(child: _buildProductGrid(user)),
+              ],
+            );
+          }),
     );
   }
 
@@ -158,11 +166,18 @@ class _ProductListPageState extends State<ProductListPage> {
                   margin: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 12.0),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.2), spreadRadius: 1, blurRadius: 5, offset: const Offset(0, 3))],
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.grey.withOpacity(0.2),
+                          spreadRadius: 1,
+                          blurRadius: 5,
+                          offset: const Offset(0, 3))
+                    ],
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(imageUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade300)),
+                    child: Image.network(imageUrl,
+                        fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade300)),
                   ),
                 );
               },
@@ -173,8 +188,11 @@ class _ProductListPageState extends State<ProductListPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: bannerImages.asMap().entries.map((entry) {
             return Container(
-              width: 6.0, height: 6.0, margin: const EdgeInsets.symmetric(horizontal: 3.0),
-              decoration: BoxDecoration(shape: BoxShape.circle, color: primaryColor.withOpacity(_currentBannerIndex == entry.key ? 0.9 : 0.2)),
+              width: 6.0,
+              height: 6.0,
+              margin: const EdgeInsets.symmetric(horizontal: 3.0),
+              decoration: BoxDecoration(
+                  shape: BoxShape.circle, color: primaryColor.withOpacity(_currentBannerIndex == entry.key ? 0.9 : 0.2)),
             );
           }).toList(),
         ),
@@ -210,7 +228,9 @@ class _ProductListPageState extends State<ProductListPage> {
             },
             backgroundColor: Colors.white,
             selectedColor: primaryColor.withOpacity(0.1),
-            labelStyle: TextStyle(color: isSelected ? primaryColor : Colors.black87, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
+            labelStyle: TextStyle(
+                color: isSelected ? primaryColor : Colors.black87,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
             side: BorderSide(color: isSelected ? primaryColor : Colors.grey.shade300),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           );
@@ -227,12 +247,18 @@ class _ProductListPageState extends State<ProductListPage> {
       child: Row(
         children: [
           Expanded(child: _buildSortItem('Phổ biến', 'popular')),
-          Container(height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
+          Container(
+              height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
           Expanded(child: _buildSortItem('Giá bán', 'price')),
-          Container(height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
+          Container(
+              height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
           InkWell(
             onTap: () => _showFilterDialog(),
-            child: Row(children: [Text('Bộ lọc', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)), const SizedBox(width: 4), Icon(Icons.filter_list, color: Colors.grey.shade600, size: 18)]),
+            child: Row(children: [
+              Text('Bộ lọc', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+              const SizedBox(width: 4),
+              Icon(Icons.filter_list, color: Colors.grey.shade600, size: 18)
+            ]),
           ),
         ],
       ),
@@ -248,7 +274,11 @@ class _ProductListPageState extends State<ProductListPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: TextStyle(color: isActive ? primaryColor : Colors.grey.shade600, fontWeight: isActive ? FontWeight.bold : FontWeight.normal, fontSize: 14)),
+          Text(label,
+              style: TextStyle(
+                  color: isActive ? primaryColor : Colors.grey.shade600,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 14)),
           Icon(Icons.arrow_drop_down, color: isActive ? primaryColor : Colors.grey.shade600),
         ],
       ),
@@ -256,36 +286,52 @@ class _ProductListPageState extends State<ProductListPage> {
   }
 
   // ... (Giữ nguyên _buildProductGrid và _buildProductCard)
-  Widget _buildProductGrid() {
+  Widget _buildProductGrid(CustomerModel? user) {
     return StreamBuilder<QuerySnapshot>(
       stream: _productStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) return Center(child: Text('Lỗi: ${snapshot.error}'));
-        if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator(color: primaryColor));
+        if (snapshot.connectionState == ConnectionState.waiting)
+          return Center(child: CircularProgressIndicator(color: primaryColor));
         final products = snapshot.data!.docs;
-        if (products.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.search_off, size: 60, color: Colors.grey.shade300), const SizedBox(height: 16), const Text('Không tìm thấy sản phẩm nào', style: TextStyle(color: Colors.grey))]));
+        if (products.isEmpty)
+          return Center(
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.search_off, size: 60, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            const Text('Không tìm thấy sản phẩm nào', style: TextStyle(color: Colors.grey))
+          ]));
         return GridView.builder(
           padding: const EdgeInsets.all(12),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.58),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.58),
           itemCount: products.length,
           itemBuilder: (context, index) {
             final doc = products[index];
             final data = {...doc.data() as Map<String, dynamic>, 'id': doc.id};
-            return _buildProductCard(data);
+            final isFavorite = user?.favoriteProducts.contains(data['id']) ?? false;
+            return _buildProductCard(data, isFavorite, () {
+              if (user != null) {
+                _customerService.toggleFavoriteProduct(data['id']);
+              }
+            });
           },
         );
       },
     );
   }
 
-  Widget _buildProductCard(Map<String, dynamic> data) {
+  Widget _buildProductCard(Map<String, dynamic> data, bool isFavorite, VoidCallback onToggleFavorite) {
     String name = data['name'] ?? 'Sản phẩm';
     num basePrice = data['basePrice'] ?? 0;
     num originalPrice = data['originalPrice'] ?? (basePrice * 1.1);
-    String imageUrl = (data['images'] != null && (data['images'] as List).isNotEmpty) ? (data['images'] as List)[0] : 'https://via.placeholder.com/150';
+    String imageUrl = (data['images'] != null && (data['images'] as List).isNotEmpty)
+        ? (data['images'] as List)[0]
+        : 'https://via.placeholder.com/150';
     String specs = data['description'] ?? '';
     double rating = (data['ratingAverage'] is num) ? (data['ratingAverage'] as num).toDouble() : 4.5;
-    int discountPercent = originalPrice > basePrice ? (((originalPrice - basePrice) / originalPrice) * 100).round() : 0;
+    int discountPercent =
+        originalPrice > basePrice ? (((originalPrice - basePrice) / originalPrice) * 100).round() : 0;
     String productId = data['id'];
 
     return GestureDetector(
@@ -298,24 +344,59 @@ class _ProductListPageState extends State<ProductListPage> {
         );
       },
       child: Container(
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 4, offset: const Offset(0, 2))]),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 4, offset: const Offset(0, 2))]),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Stack(
               children: [
-                ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(12)), child: Image.network(imageUrl, height: 150, width: double.infinity, fit: BoxFit.contain, errorBuilder: (_, __, ___) => Container(height: 150, color: Colors.grey.shade100))),
-                if (discountPercent > 0) Positioned(top: 8, left: 8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)), child: Text('-$discountPercent%', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
+                ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                    child: Image.network(imageUrl,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Container(height: 150, color: Colors.grey.shade100))),
+                if (discountPercent > 0)
+                  Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
+                          child: Text('-$discountPercent%',
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
               ],
             ),
-            Expanded(child: Padding(padding: const EdgeInsets.all(10), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4), Text(specs, style: TextStyle(fontSize: 11, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
-              const Spacer(), Text(_formatCurrency(basePrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
-              if (discountPercent > 0) Text(_formatCurrency(originalPrice), style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 11)),
-              const SizedBox(height: 6),
-              Row(children: [Icon(Icons.star, color: Colors.amber, size: 14), const SizedBox(width: 4), Text("$rating", style: const TextStyle(fontSize: 11)), const Spacer(), const Icon(Icons.favorite_border, size: 18, color: Colors.grey)])
-            ]))),
+            Expanded(
+                child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
+                      Text(specs, style: TextStyle(fontSize: 11, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const Spacer(),
+                      Text(_formatCurrency(basePrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
+                      if (discountPercent > 0)
+                        Text(_formatCurrency(originalPrice),
+                            style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 11)),
+                      const SizedBox(height: 6),
+                      Row(children: [
+                        Icon(Icons.star, color: Colors.amber, size: 14),
+                        const SizedBox(width: 4),
+                        Text("$rating", style: const TextStyle(fontSize: 11)),
+                        const Spacer(),
+                        IconButton(
+                          icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? Colors.red : Colors.grey, size: 18),
+                          onPressed: onToggleFavorite,
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints(),
+                        )
+                      ])
+                    ]))),
           ],
         ),
       ),
@@ -329,18 +410,31 @@ class _ProductListPageState extends State<ProductListPage> {
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(20),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Sắp xếp theo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            _buildSortRadio('Phổ biến', 'popular'), _buildSortRadio('Giá thấp đến cao', 'priceAsc'), _buildSortRadio('Giá cao đến thấp', 'priceDesc')
-          ]),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Sắp xếp theo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                _buildSortRadio('Phổ biến', 'popular'),
+                _buildSortRadio('Giá thấp đến cao', 'priceAsc'),
+                _buildSortRadio('Giá cao đến thấp', 'priceDesc')
+              ]),
         );
       },
     );
   }
 
   Widget _buildSortRadio(String title, String value) {
-    return ListTile(title: Text(title, style: TextStyle(color: _sortBy == value ? primaryColor : Colors.black87)), trailing: _sortBy == value ? Icon(Icons.check, color: primaryColor) : null, onTap: () { setState(() { _sortBy = value; _updateProductStream(); }); Navigator.pop(context); });
+    return ListTile(
+        title: Text(title, style: TextStyle(color: _sortBy == value ? primaryColor : Colors.black87)),
+        trailing: _sortBy == value ? Icon(Icons.check, color: primaryColor) : null,
+        onTap: () {
+          setState(() {
+            _sortBy = value;
+            _updateProductStream();
+          });
+          Navigator.pop(context);
+        });
   }
 
   // --- [ĐÃ SỬA] DIALOG BỘ LỌC HOÀN CHỈNH ---
@@ -458,7 +552,8 @@ class _ProductListPageState extends State<ProductListPage> {
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          child: const Text('Xem kết quả', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                          child: const Text('Xem kết quả',
+                              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ],

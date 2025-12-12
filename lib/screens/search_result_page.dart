@@ -1,4 +1,6 @@
 
+import 'package:ecmobile/models/customer_model.dart';
+import 'package:ecmobile/services/customer_service.dart';
 import 'package:ecmobile/widgets/reusable_search_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -43,13 +45,16 @@ class SearchResultPage extends StatefulWidget {
   final List<Product> products;
   final List<Product> allProducts;
 
-  const SearchResultPage({Key? key, required this.searchQuery, required this.products, required this.allProducts}) : super(key: key);
+  const SearchResultPage(
+      {Key? key, required this.searchQuery, required this.products, required this.allProducts})
+      : super(key: key);
 
   @override
   State<SearchResultPage> createState() => _SearchResultPageState();
 }
 
 class _SearchResultPageState extends State<SearchResultPage> {
+  final CustomerService _customerService = CustomerService();
   final TextEditingController _searchController = TextEditingController();
   late List<Product> _foundProducts;
 
@@ -93,21 +98,27 @@ class _SearchResultPageState extends State<SearchResultPage> {
           onChanged: _runFilter,
         ),
       ),
-      body: Column( // Thêm Column để chứa các bộ lọc sau này
-        children: [
-          // TODO: Thêm các chip lọc (Tất cả, Liên quan, Mới nhất) ở đây
-          const SizedBox(height: 16), // Khoảng cách nhỏ
-          
-          // *** FIX: Thêm Expanded để GridView có thể cuộn ***
-          Expanded(
-            child: _buildProductGrid(),
-          ),
-        ],
-      ),
+      body: StreamBuilder<CustomerModel?>(
+          stream: _customerService.getUserStream(),
+          builder: (context, snapshot) {
+            final user = snapshot.data;
+            return Column(
+              // Thêm Column để chứa các bộ lọc sau này
+              children: [
+                // TODO: Thêm các chip lọc (Tất cả, Liên quan, Mới nhất) ở đây
+                const SizedBox(height: 16), // Khoảng cách nhỏ
+
+                // *** FIX: Thêm Expanded để GridView có thể cuộn ***
+                Expanded(
+                  child: _buildProductGrid(user),
+                ),
+              ],
+            );
+          }),
     );
   }
 
-  Widget _buildProductGrid() {
+  Widget _buildProductGrid(CustomerModel? user) {
     if (_foundProducts.isEmpty) {
       return const Center(
         child: Text(
@@ -128,16 +139,21 @@ class _SearchResultPageState extends State<SearchResultPage> {
       ),
       itemCount: _foundProducts.length,
       itemBuilder: (context, index) {
+        final product = _foundProducts[index];
+        final isFavorite = user?.favoriteProducts.contains(product.id) ?? false;
         return ProductCard(
-          product: _foundProducts[index],
-          isFavorite: false,
-          onToggleFavorite: () {},
+          product: product,
+          isFavorite: isFavorite,
+          onToggleFavorite: () {
+            if (user != null) {
+              _customerService.toggleFavoriteProduct(product.id);
+            }
+          },
         );
       },
     );
   }
 }
-
 
 // ProductCard giữ nguyên như cũ
 class ProductCard extends StatelessWidget {
@@ -183,22 +199,22 @@ class ProductCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
                 child: imageUrl.isNotEmpty
-                  ? Image.network(
-                      imageUrl,
-                      height: 150,
-                      width: double.infinity,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Container(
+                    ? Image.network(
+                        imageUrl,
+                        height: 150,
+                        width: double.infinity,
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 150,
+                          color: Colors.grey.shade200,
+                          child: Icon(Icons.broken_image, color: Colors.grey.shade400),
+                        ),
+                      )
+                    : Container(
                         height: 150,
                         color: Colors.grey.shade200,
-                        child: Icon(Icons.broken_image, color: Colors.grey.shade400),
+                        child: Icon(Icons.image_not_supported, color: Colors.grey.shade400),
                       ),
-                    )
-                  : Container(
-                      height: 150,
-                      color: Colors.grey.shade200,
-                      child: Icon(Icons.image_not_supported, color: Colors.grey.shade400),
-                    ),
               ),
             ],
           ),

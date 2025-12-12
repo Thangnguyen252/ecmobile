@@ -1,9 +1,5 @@
-// lib/screens/forgot_password_screen.dart
-
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:ecmobile/services/email_auth_service.dart';
-import 'package:ecmobile/screens/forgot_password_otp_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -16,7 +12,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final TextEditingController _emailController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _handleSendCode() async {
+  Future<void> _handleSendResetEmail() async {
     String email = _emailController.text.trim();
 
     if (email.isEmpty || !email.contains('@')) {
@@ -29,60 +25,37 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // 1. Kiểm tra email có tồn tại trong hệ thống (Firestore) không
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('customers')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
 
-      if (querySnapshot.docs.isEmpty) {
-        setState(() => _isLoading = false);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email này chưa được đăng ký!'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('Đã gửi email đặt lại mật khẩu. Vui lòng kiểm tra hộp thư của bạn.'),
+            backgroundColor: Colors.green,
+          ),
         );
-        return;
+        Navigator.pop(context);
       }
-
-      // Lấy thông tin user để gửi mail chào hỏi (optional)
-      String userName = querySnapshot.docs.first.get('fullName') ?? 'Khách hàng';
-      String userId = querySnapshot.docs.first.id;
-
-      // 2. Tạo OTP và gửi mail
-      String otp = EmailAuthService.generateOTP();
-      bool isSent = await EmailAuthService.sendOTP(
-        name: userName,
-        email: email,
-        otp: otp,
-      );
-
-      setState(() => _isLoading = false);
-
-      if (isSent) {
-        // 3. Chuyển sang màn hình xác nhận OTP
-        if (mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ForgotPasswordOtpScreen(
-                email: email,
-                generatedOTP: otp,
-                userId: userId, // Truyền ID để sau này update password
-              ),
-            ),
-          );
-        }
-      } else {
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Có lỗi xảy ra.';
+      if (e.code == 'user-not-found') {
+        errorMessage = 'Không tìm thấy tài khoản nào với email này.';
+      }
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gửi mã thất bại. Vui lòng thử lại.')),
+          SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
         );
       }
-
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -103,13 +76,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           children: [
             const SizedBox(height: 20),
             const Text(
-              'Nhập email của bạn để nhận mã xác nhận đổi mật khẩu.',
+              'Nhập email của bạn để nhận link đặt lại mật khẩu.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
             const SizedBox(height: 40),
-
-            // Ô nhập Email (UI đơn giản)
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -127,21 +98,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 40),
-
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleSendCode,
+                onPressed: _isLoading ? null : _handleSendResetEmail,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFF6B21),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Gửi mã xác nhận', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    : const Text('Gửi link đặt lại', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
               ),
             ),
           ],

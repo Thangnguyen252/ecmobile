@@ -14,6 +14,7 @@ class CustomerModel {
   final int purchasedOrderCount;
   final double totalSpending;
   final DateTime? createdAt;
+  final List<String> favoriteProducts;
 
   CustomerModel({
     required this.uid,
@@ -29,6 +30,7 @@ class CustomerModel {
     required this.purchasedOrderCount,
     required this.totalSpending,
     this.createdAt,
+    required this.favoriteProducts,
   });
 
   // Factory để tạo object từ Firestore Document
@@ -57,6 +59,7 @@ class CustomerModel {
       purchasedOrderCount: (data['purchasedOrderCount'] ?? 0).toInt(),
       totalSpending: (data['totalSpending'] ?? 0).toDouble(),
       createdAt: createdDate,
+      favoriteProducts: List<String>.from(data['favoriteProducts'] ?? []),
     );
   }
 }

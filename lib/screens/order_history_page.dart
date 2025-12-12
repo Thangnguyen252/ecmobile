@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'order_detail_page.dart'; // Đảm bảo đã import trang chi tiết
@@ -14,8 +15,8 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerPr
   late TabController _tabController;
   final List<String> _tabs = ['Tất cả', 'Chờ xác nhận', 'Đang giao', 'Đã giao', 'Đã hủy'];
 
-  // Email của user hiện tại
-  final String currentUserEmail = 'thangvh2004@gmail.com';
+  // Lấy email của người dùng hiện tại một cách an toàn
+  String? get currentUserEmail => FirebaseAuth.instance.currentUser?.email;
 
   @override
   void initState() {
@@ -37,60 +38,67 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerPr
     return format.format(price);
   }
 
-  // --- [SỬA 1] CẬP NHẬT MÀU SẮC ---
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'đã thanh toán':
-        return Colors.green; // [SỬA] Đã thanh toán -> Màu xanh lá (Uy tín)
-
+        return Colors.green;
       case 'chờ xác nhận':
       case 'pending':
         return Colors.orange;
-
       case 'đang giao':
       case 'shipping':
         return Colors.blue;
-
       case 'giao thành công':
       case 'completed':
         return Colors.green;
-
       case 'đã hủy':
       case 'cancelled':
         return Colors.red;
-
-      default: return Colors.grey;
+      default:
+        return Colors.grey;
     }
   }
 
-  // --- [SỬA 2] CẬP NHẬT CHỮ HIỂN THỊ ---
   String _getStatusText(String status) {
     switch (status.toLowerCase()) {
       case 'đã thanh toán':
-        return 'Đã thanh toán'; // [SỬA] Hiển thị đúng chữ "Đã thanh toán"
-
+        return 'Đã thanh toán';
       case 'pending':
       case 'chờ xác nhận':
         return 'Chờ xác nhận';
-
       case 'shipping':
       case 'đang giao':
         return 'Đang vận chuyển';
-
       case 'completed':
       case 'giao thành công':
         return 'Giao thành công';
-
       case 'cancelled':
       case 'đã hủy':
         return 'Đã hủy';
-
-      default: return status;
+      default:
+        return status;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Kiểm tra nếu người dùng chưa đăng nhập
+    if (currentUserEmail == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Lịch sử đơn hàng')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.login, size: 80, color: Colors.grey),
+              SizedBox(height: 16),
+              Text("Vui lòng đăng nhập để xem lịch sử.", style: TextStyle(color: Colors.grey, fontSize: 16)),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lịch sử đơn hàng', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -144,18 +152,28 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerPr
     );
   }
 
-  Stream<QuerySnapshot> _buildQuery() {
-    Query query = FirebaseFirestore.instance.collection('orders')
+  Stream<QuerySnapshot<Object?>> _buildQuery() {
+    // Sử dụng email đã lấy được để truy vấn
+    Query query = FirebaseFirestore.instance
+        .collection('orders')
         .where('email', isEqualTo: currentUserEmail)
         .orderBy('createdAt', descending: true);
 
-    if (_tabController.index != 0) {
-      // Phần lọc tab con này tạm thời giữ nguyên hoặc bỏ qua nếu logic phức tạp
-      // query = query.where('status', isEqualTo: ...);
+    String statusToFilter = '';
+    switch (_tabController.index) {
+      case 1: statusToFilter = 'chờ xác nhận'; break;
+      case 2: statusToFilter = 'đang giao'; break;
+      case 3: statusToFilter = 'đã giao'; break;
+      case 4: statusToFilter = 'đã hủy'; break;
+    }
+
+    if (statusToFilter.isNotEmpty) {
+      query = query.where('status', isEqualTo: statusToFilter);
     }
 
     return query.snapshots();
   }
+
 
   Widget _buildOrderItem(Map<String, dynamic> data, String orderId) {
     String status = data['status'] ?? 'pending';
@@ -194,7 +212,6 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerPr
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text('Mã: ${orderId.substring(0, 8).toUpperCase()}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                // Gọi hàm hiển thị text trạng thái đã sửa
                 Text(
                     _getStatusText(status).toUpperCase(),
                     style: TextStyle(color: _getStatusColor(status), fontWeight: FontWeight.bold, fontSize: 12)

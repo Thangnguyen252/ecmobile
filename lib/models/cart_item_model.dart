@@ -65,35 +65,33 @@ class CartItemModel {
   });
 
   // --- 1. Factory: Tạo Object từ Firebase Document ---
-  factory CartItemModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  factory CartItemModel.fromFirestore(DocumentSnapshot cartDoc, Map<String, dynamic> productData) {
+    final cartData = cartDoc.data() as Map<String, dynamic>;
+
+    final images = productData['images'] as List<dynamic>?;
+    final imageUrl = (images != null && images.isNotEmpty)
+        ? images[0].toString()
+        : 'https://via.placeholder.com/150';
+
     return CartItemModel(
-      cartItemId: doc.id,
-      productId: data['productId'] ?? '',
-      productName: data['productName'] ?? 'Sản phẩm chưa đặt tên',
-      productImage: data['productImage'] ?? '',
-      currentPrice: (data['currentPrice'] ?? 0).toDouble(),
-      originalPrice: (data['originalPrice'] ?? 0).toDouble(),
-      quantity: data['quantity'] ?? 1,
-      isSelected: data['isSelected'] ?? false,
-      promos: (data['promos'] as List<dynamic>?)
-          ?.map((e) => PromoInfo.fromMap(e))
-          .toList() ??
-          [],
+      cartItemId: cartDoc.id,
+      productId: cartDoc.id,
+      productName: productData['name'] ?? 'Sản phẩm không có tên',
+      productImage: imageUrl,
+      currentPrice: (productData['basePrice'] ?? 0).toDouble(),
+      originalPrice: (productData['originalPrice'] ?? 0).toDouble(),
+      quantity: cartData['quantity'] ?? 1,
+      isSelected: cartData['isSelected'] ?? false,
+      promos: [], // Promos được xử lý ở UI
     );
   }
 
   // --- 2. Method: Chuyển Object thành Map để lưu lên Firebase ---
   Map<String, dynamic> toFirestore() {
     return {
-      'productId': productId,
-      'productName': productName,
-      'productImage': productImage,
-      'currentPrice': currentPrice,
-      'originalPrice': originalPrice,
+      // Chỉ lưu những thông tin thuộc về giỏ hàng
       'quantity': quantity,
       'isSelected': isSelected,
-      'promos': promos.map((e) => e.toMap()).toList(),
     };
   }
 
