@@ -1,5 +1,5 @@
 import 'package:ecmobile/models/customer_model.dart';
-import 'package:ecmobile/screens/product_detail.dart';
+import 'package:ecmobile/screens/Product_detail/product_detail.dart';
 import 'package:ecmobile/services/customer_service.dart';
 import 'package:flutter/material.dart' hide CarouselController;
 import 'package:carousel_slider/carousel_slider.dart';
@@ -8,8 +8,8 @@ import 'package:intl/intl.dart';
 import 'flash_sale_page.dart';
 import 'order_history_page.dart';
 import 'event_page.dart';
-import 'product_list_page.dart';
-import 'membership_rules_page.dart';
+import '../Product_detail/product_list_page.dart';
+import '../Account/membership_rules_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);

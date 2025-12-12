@@ -1,7 +1,7 @@
 // lib/screens/forgot_password_otp_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:ecmobile/screens/reset_password_screen.dart';
+import 'package:ecmobile/screens/Login/reset_password_screen.dart';
 
 class ForgotPasswordOtpScreen extends StatefulWidget {
   final String email;

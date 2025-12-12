@@ -1,4 +1,4 @@
-import 'package:ecmobile/screens/login_screen.dart';
+import 'package:ecmobile/screens/Login/login_screen.dart';
 import 'package:ecmobile/services/google_auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:ecmobile/theme/app_colors.dart';
@@ -6,11 +6,11 @@ import 'package:ecmobile/models/customer_model.dart';
 import 'package:ecmobile/services/customer_service.dart';
 import 'package:intl/intl.dart';
 import 'package:ecmobile/screens/student_verify_page.dart';
-import 'package:ecmobile/screens/user_info_page.dart';
-import 'package:ecmobile/screens/membership_rules_page.dart';
+import 'package:ecmobile/screens/Account/user_info_page.dart';
+import 'package:ecmobile/screens/Account/membership_rules_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:ecmobile/screens/forgot_password_screen.dart'; // Import forgot password screen
-import 'package:ecmobile/screens/favorite_products_page.dart'; // Import favorite products page
+import 'package:ecmobile/screens/Login/forgot_password_screen.dart'; // Import forgot password screen
+import 'package:ecmobile/screens/Account/favorite_products_page.dart'; // Import favorite products page
 
 class AccountPage extends StatefulWidget {
   const AccountPage({Key? key}) : super(key: key);

@@ -6,8 +6,8 @@ import 'dart:convert'; // Để decode JSON
 import 'package:http/http.dart' as http; // Để gọi API
 import 'package:ecmobile/models/address_model.dart'; // Model địa chỉ
 import 'package:random_string/random_string.dart'; // Để tạo mã ngẫu nhiên
-import 'package:ecmobile/screens/qr_payment_page.dart'; // Màn hình QR
-import 'package:ecmobile/screens/payment_success_page.dart'; // --- THÊM IMPORT NÀY ---
+import 'package:ecmobile/screens/Order/qr_payment_page.dart'; // Màn hình QR
+import 'package:ecmobile/screens/Order/payment_success_page.dart'; // --- THÊM IMPORT NÀY ---
 import 'package:cloud_firestore/cloud_firestore.dart'; // Để dùng Timestamp
 import 'package:ecmobile/services/order_service.dart'; // Service vừa tạo
 // Định nghĩa các phương thức thanh toán

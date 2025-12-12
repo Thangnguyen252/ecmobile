@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/models/cart_item_model.dart';
 import 'package:ecmobile/services/cart_service.dart'; // Import Service
-import 'package:ecmobile/screens/checkout_page.dart';
+import 'package:ecmobile/screens/Order/checkout_page.dart';
 import 'package:intl/intl.dart';
 
 class CartPage extends StatefulWidget {

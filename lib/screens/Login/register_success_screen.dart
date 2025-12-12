@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 // Import màn hình LoginScreen để điều hướng
-import 'package:ecmobile/screens/login_screen.dart';
+import 'package:ecmobile/screens/Login/login_screen.dart';
 
 class RegisterSuccessScreen extends StatelessWidget {
   const RegisterSuccessScreen({super.key});

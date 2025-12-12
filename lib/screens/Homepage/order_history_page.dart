@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'order_detail_page.dart'; // Đảm bảo đã import trang chi tiết
+import '../Order/order_detail_page.dart'; // Đảm bảo đã import trang chi tiết
 
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({Key? key}) : super(key: key);

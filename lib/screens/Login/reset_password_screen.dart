@@ -2,7 +2,7 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:ecmobile/screens/password_change_success_screen.dart';
+import 'package:ecmobile/screens/Login/password_change_success_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String userId; // ID của user cần đổi pass

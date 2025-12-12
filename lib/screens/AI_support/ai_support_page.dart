@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import '../models/chat_model.dart';
+import '../../models/chat_model.dart';
 import 'chat_detail_page.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 

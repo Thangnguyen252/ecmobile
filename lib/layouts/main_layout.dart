@@ -1,11 +1,11 @@
-import 'package:ecmobile/screens/product_search_screen.dart';
+import 'package:ecmobile/screens/Search/product_search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:ecmobile/theme/app_colors.dart';
-import 'package:ecmobile/screens/home_page.dart';
-import 'package:ecmobile/screens/cart_page.dart';
+import 'package:ecmobile/screens/Homepage/home_page.dart';
+import 'package:ecmobile/screens/Order/cart_page.dart';
 import 'package:ecmobile/widgets/custom_search_app_bar.dart';
-import 'package:ecmobile/screens/account_page.dart';
-import 'package:ecmobile/screens/ai_support_page.dart';
+import 'package:ecmobile/screens/Account/account_page.dart';
+import 'package:ecmobile/screens/AI_support/ai_support_page.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({Key? key}) : super(key: key);

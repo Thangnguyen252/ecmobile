@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:ecmobile/theme/app_colors.dart';
-import 'package:ecmobile/screens/payment_success_page.dart';
+import 'package:ecmobile/screens/Order/payment_success_page.dart';
 import 'package:intl/intl.dart';
 import 'package:ecmobile/services/order_service.dart'; // Import OrderService
 

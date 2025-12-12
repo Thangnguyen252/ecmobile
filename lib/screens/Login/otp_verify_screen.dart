@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:ecmobile/screens/register_success_screen.dart';
+import 'package:ecmobile/screens/Login/register_success_screen.dart';
 import 'package:ecmobile/services/email_auth_service.dart';
 
 class OtpVerifyScreen extends StatefulWidget {

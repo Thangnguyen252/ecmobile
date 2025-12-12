@@ -1,6 +1,6 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:ecmobile/screens/search_result_page.dart';
+import 'package:ecmobile/screens/Search/search_result_page.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/widgets/reusable_search_bar.dart';
 import 'package:flutter/material.dart';

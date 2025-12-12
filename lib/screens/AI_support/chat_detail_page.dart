@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/chat_model.dart';
-import '../services/groq_service.dart';
+import '../../models/chat_model.dart';
+import '../../services/groq_service.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 
 class ChatDetailPage extends StatefulWidget {

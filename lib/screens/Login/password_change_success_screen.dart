@@ -1,7 +1,7 @@
 // lib/screens/password_change_success_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:ecmobile/screens/login_screen.dart';
+import 'package:ecmobile/screens/Login/login_screen.dart';
 
 class PasswordChangeSuccessScreen extends StatelessWidget {
   const PasswordChangeSuccessScreen({super.key});
