@@ -1,6 +1,7 @@
 import 'package:ecmobile/models/customer_model.dart';
 import 'package:ecmobile/screens/Product_detail/product_detail.dart';
 import 'package:ecmobile/services/customer_service.dart';
+import 'package:ecmobile/widgets/reusable_search_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -25,10 +26,12 @@ class ProductListPage extends StatefulWidget {
 class _ProductListPageState extends State<ProductListPage> {
   final CustomerService _customerService = CustomerService();
   final Color primaryColor = const Color(0xFFFA661B);
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   // Filter states
   String _selectedBrand = '';
-  String _sortBy = 'popular';
+  String _sortBy = 'priceAsc'; // Default to price low to high
 
   // [MỚI] State lọc giá
   double? _minPrice;
@@ -62,6 +65,12 @@ class _ProductListPageState extends State<ProductListPage> {
     _updateProductStream();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   // Hàm tạo Query (Lọc & Sắp xếp)
   void _updateProductStream() {
     Query query = FirebaseFirestore.instance
@@ -82,16 +91,10 @@ class _ProductListPageState extends State<ProductListPage> {
     }
 
     // 3. Sắp xếp
-    if (_minPrice != null || _maxPrice != null) {
-      // Nếu lọc giá -> Bắt buộc sort theo giá trước
-      query = query.orderBy('basePrice', descending: _sortBy == 'priceDesc');
-    } else {
-      // Nếu không lọc giá -> Sort bình thường
-      if (_sortBy == 'priceAsc') {
-        query = query.orderBy('basePrice', descending: false);
-      } else if (_sortBy == 'priceDesc') {
-        query = query.orderBy('basePrice', descending: true);
-      }
+    if (_sortBy == 'priceAsc') {
+      query = query.orderBy('basePrice', descending: false);
+    } else if (_sortBy == 'priceDesc') {
+      query = query.orderBy('basePrice', descending: true);
     }
 
     _productStream = query.snapshots();
@@ -118,7 +121,6 @@ class _ProductListPageState extends State<ProductListPage> {
     );
   }
 
-  // ... (Giữ nguyên _buildAppBar)
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: primaryColor,
@@ -129,21 +131,23 @@ class _ProductListPageState extends State<ProductListPage> {
       ),
       title: Container(
         height: 40,
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(8)
+        ),
         child: TextField(
           decoration: InputDecoration(
             hintText: 'Tìm kiếm trong ${widget.categoryTitle}...',
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 16),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-            prefixIcon: Icon(Icons.search, color: Colors.grey.shade600, size: 20),
+            prefixIcon: Icon(Icons.search, color: Colors.grey.shade600, size: 26),
           ),
         ),
       ),
     );
   }
 
-  // ... (Giữ nguyên _buildPromotionalBanner)
   Widget _buildPromotionalBanner() {
     if (bannerImages.isEmpty) return const SizedBox.shrink();
     return Column(
@@ -201,9 +205,7 @@ class _ProductListPageState extends State<ProductListPage> {
     );
   }
 
-  // ... (Giữ nguyên _buildFilterTabs)
   Widget _buildFilterTabs() {
-    // Nếu không có brand truyền vào thì tự tạo list demo để không bị trống
     List<String> tabs = widget.brands ?? ['Apple', 'Samsung', 'Xiaomi', 'Vivo', 'Oppo'];
 
     return Container(
@@ -239,17 +241,16 @@ class _ProductListPageState extends State<ProductListPage> {
     );
   }
 
-  // ... (Giữ nguyên _buildSortAndFilterBar)
   Widget _buildSortAndFilterBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
       child: Row(
         children: [
-          Expanded(child: _buildSortItem('Phổ biến', 'popular')),
+          Expanded(child: _buildSortItem('Giá thấp đến cao', 'priceAsc')),
           Container(
               height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
-          Expanded(child: _buildSortItem('Giá bán', 'price')),
+          Expanded(child: _buildSortItem('Giá cao đến thấp', 'priceDesc')),
           Container(
               height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
           InkWell(
@@ -266,11 +267,14 @@ class _ProductListPageState extends State<ProductListPage> {
   }
 
   Widget _buildSortItem(String label, String valueKey) {
-    bool isActive = false;
-    if (valueKey == 'popular' && _sortBy == 'popular') isActive = true;
-    if (valueKey == 'price' && (_sortBy == 'priceAsc' || _sortBy == 'priceDesc')) isActive = true;
+    bool isActive = _sortBy == valueKey;
     return InkWell(
-      onTap: () => _showSortOptions(),
+      onTap: () {
+        setState(() {
+          _sortBy = valueKey;
+          _updateProductStream();
+        });
+      },
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -279,13 +283,11 @@ class _ProductListPageState extends State<ProductListPage> {
                   color: isActive ? primaryColor : Colors.grey.shade600,
                   fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                   fontSize: 14)),
-          Icon(Icons.arrow_drop_down, color: isActive ? primaryColor : Colors.grey.shade600),
         ],
       ),
     );
   }
 
-  // ... (Giữ nguyên _buildProductGrid và _buildProductCard)
   Widget _buildProductGrid(CustomerModel? user) {
     return StreamBuilder<QuerySnapshot>(
       stream: _productStream,
@@ -293,7 +295,16 @@ class _ProductListPageState extends State<ProductListPage> {
         if (snapshot.hasError) return Center(child: Text('Lỗi: ${snapshot.error}'));
         if (snapshot.connectionState == ConnectionState.waiting)
           return Center(child: CircularProgressIndicator(color: primaryColor));
-        final products = snapshot.data!.docs;
+        var products = snapshot.data!.docs;
+
+        if (_searchQuery.isNotEmpty) {
+          products = products.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final name = data['name'] as String? ?? '';
+            return name.toLowerCase().contains(_searchQuery.toLowerCase());
+          }).toList();
+        }
+
         if (products.isEmpty)
           return Center(
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -301,6 +312,7 @@ class _ProductListPageState extends State<ProductListPage> {
             const SizedBox(height: 16),
             const Text('Không tìm thấy sản phẩm nào', style: TextStyle(color: Colors.grey))
           ]));
+
         return GridView.builder(
           padding: const EdgeInsets.all(12),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -415,7 +427,6 @@ class _ProductListPageState extends State<ProductListPage> {
               children: [
                 const Text('Sắp xếp theo', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
-                _buildSortRadio('Phổ biến', 'popular'),
                 _buildSortRadio('Giá thấp đến cao', 'priceAsc'),
                 _buildSortRadio('Giá cao đến thấp', 'priceDesc')
               ]),
@@ -437,18 +448,16 @@ class _ProductListPageState extends State<ProductListPage> {
         });
   }
 
-  // --- [ĐÃ SỬA] DIALOG BỘ LỌC HOÀN CHỈNH ---
   void _showFilterDialog() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) {
-        // Dùng StatefulBuilder để cập nhật UI trong Dialog
         return StatefulBuilder(
           builder: (context, setStateModal) {
             return DraggableScrollableSheet(
-              initialChildSize: 0.6, // Cao hơn để chứa đủ nội dung
+              initialChildSize: 0.6,
               minChildSize: 0.4,
               maxChildSize: 0.9,
               expand: false,
@@ -459,7 +468,6 @@ class _ProductListPageState extends State<ProductListPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Header
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -481,7 +489,6 @@ class _ProductListPageState extends State<ProductListPage> {
                       ),
 
                       const SizedBox(height: 16),
-                      // 1. Thương hiệu
                       const Text('Thương hiệu', style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
                       Wrap(
@@ -504,7 +511,6 @@ class _ProductListPageState extends State<ProductListPage> {
                       ),
 
                       const SizedBox(height: 24),
-                      // 2. Mức giá (Phần này trước đây bị thiếu)
                       const Text('Mức giá', style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 10),
                       Wrap(
@@ -537,13 +543,12 @@ class _ProductListPageState extends State<ProductListPage> {
                       ),
 
                       const SizedBox(height: 30),
-                      // Nút Áp dụng
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
                             setState(() {
-                              _updateProductStream(); // Cập nhật danh sách bên ngoài
+                              _updateProductStream();
                             });
                             Navigator.pop(context);
                           },

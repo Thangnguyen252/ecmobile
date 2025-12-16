@@ -10,6 +10,8 @@ import 'order_history_page.dart';
 import 'event_page.dart';
 import '../Product_detail/product_list_page.dart';
 import '../Account/membership_rules_page.dart';
+import 'dart:math';
+import 'package:flutter/material.dart';
 import '../Product_detail/HotProduct.dart';
 
 class HomePage extends StatefulWidget {
@@ -423,7 +425,7 @@ class _HomePageState extends State<HomePage> {
                   selected: selectedIndex == index,
                   onSelected: (selected) => onChipSelected(index),
                   selectedColor: primaryColor,
-                  backgroundColor: Colors.grey.shade100,
+                  backgroundColor: Colors.white,
                   labelStyle: TextStyle(color: selectedIndex == index ? Colors.white : Colors.black),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20.0),
@@ -938,3 +940,5 @@ class ProductCard extends StatelessWidget {
     );
   }
 }
+
+

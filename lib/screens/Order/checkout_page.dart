@@ -10,6 +10,8 @@ import 'package:ecmobile/screens/Order/qr_payment_page.dart'; // Màn hình QR
 import 'package:ecmobile/screens/Order/payment_success_page.dart'; // --- THÊM IMPORT NÀY ---
 import 'package:cloud_firestore/cloud_firestore.dart'; // Để dùng Timestamp
 import 'package:ecmobile/services/order_service.dart'; // Service vừa tạo
+import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
+
 // Định nghĩa các phương thức thanh toán
 enum PaymentMethod { qr, cod }
 
@@ -40,14 +42,16 @@ class _CheckoutPageState extends State<CheckoutPage>
   // Controller để điều khiển TabBar
   late TabController _tabController;
   final OrderService _orderService = OrderService(); // Instance của Service
-  // --- Dữ liệu giả (PLACEHOLDER) cho thông tin người dùng ---
-  String _userName = "Nguyễn Quang Thắng";
-  String _userPhone = "0772983376";
-  String _userEmail = "thangvh2004@gmail.com";
-  bool _isStudent = true;
-  bool _isMember = true;
+  User? _currentUser;
+
+  // --- Dữ liệu người dùng ---
+  String _userEmail = "Chưa có";
+  bool _isStudent = true; // Sẽ cập nhật sau khi có dữ liệu user
+  bool _isMember = true; // Sẽ cập nhật sau khi có dữ liệu user
 
   // Controller cho các ô text field
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
   final TextEditingController _voucherCodeController = TextEditingController();
@@ -91,17 +95,49 @@ class _CheckoutPageState extends State<CheckoutPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadUserData();
     _loadProvinces(); // Tải danh sách tỉnh/thành
   }
 
   @override
   void dispose() {
     _tabController.dispose();
+    _nameController.dispose();
+    _phoneController.dispose();
     _addressController.dispose();
     _notesController.dispose();
     _voucherCodeController.dispose();
     super.dispose();
   }
+
+  // Lấy thông tin người dùng đang đăng nhập
+  Future<void> _loadUserData() async {
+    _currentUser = FirebaseAuth.instance.currentUser;
+    if (_currentUser != null) {
+      // Lấy thêm thông tin từ Firestore
+      DocumentSnapshot<Map<String, dynamic>> userDoc = await FirebaseFirestore
+          .instance
+          .collection('users')
+          .doc(_currentUser!.uid)
+          .get();
+
+      if (userDoc.exists) {
+        setState(() {
+          _nameController.text = userDoc.data()?['fullName'] ?? _currentUser!.displayName ?? "";
+          _phoneController.text = userDoc.data()?['phoneNumber'] ?? _currentUser!.phoneNumber ?? "";
+          _userEmail = _currentUser!.email ?? "Không có email";
+        });
+      } else {
+        // Nếu không có document, dùng tạm thông tin từ Auth
+        setState(() {
+          _nameController.text = _currentUser!.displayName ?? "";
+          _phoneController.text = _currentUser!.phoneNumber ?? "";
+          _userEmail = _currentUser!.email ?? "Không có email";
+        });
+      }
+    }
+  }
+
 
   // --- CÁC HÀM GỌI API (ĐỊA CHỈ) ---
   Future<void> _loadProvinces() async {
@@ -332,7 +368,9 @@ class _CheckoutPageState extends State<CheckoutPage>
   }
 
   void _navigateToPaymentTab() {
-    if (_selectedProvince == null ||
+    if (_nameController.text.isEmpty ||
+        _phoneController.text.isEmpty ||
+        _selectedProvince == null ||
         _selectedDistrict == null ||
         _selectedWard == null ||
         _addressController.text.isEmpty) {
@@ -834,8 +872,8 @@ class _CheckoutPageState extends State<CheckoutPage>
             ),
           ),
           const SizedBox(height: 16),
-          _buildReceiverInfoRow('Họ và tên:', _userName),
-          _buildReceiverInfoRow('Số điện thoại:', _userPhone),
+          _buildReceiverInfoRow('Họ và tên:', _nameController.text),
+          _buildReceiverInfoRow('Số điện thoại:', _phoneController.text),
           _buildReceiverInfoRow('Nhận hàng tại:', fullAddress,
               isAddress: true),
           _buildReceiverInfoRow('Ghi chú:', notes),
@@ -963,6 +1001,13 @@ class _CheckoutPageState extends State<CheckoutPage>
             height: 48,
             child: ElevatedButton(
               onPressed: () async {
+                if (_currentUser == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('Lỗi: Không tìm thấy người dùng. Vui lòng đăng nhập lại.'),
+                    backgroundColor: Colors.red,
+                  ));
+                  return;
+                }
                 // 1. Chuẩn bị dữ liệu Đơn hàng (Common Data)
                 String orderId = 'ORDER-${randomAlphaNumeric(7).toUpperCase()}';
 
@@ -976,9 +1021,10 @@ class _CheckoutPageState extends State<CheckoutPage>
 
                 Map<String, dynamic> orderData = {
                   'orderId': orderId,
-                  'userId': "user_thangvh2004", // ID cứng hoặc lấy từ Auth
-                  'customerName': _userName,
-                  'email': _userEmail,
+                  'userId': _currentUser!.uid, // Lấy ID từ Auth
+                  'customerName': _nameController.text, // Lấy tên từ controller
+                  'customerPhone': _phoneController.text, // Lấy SĐT từ controller
+                  'email': _userEmail,       // Lấy email từ state
                   'shippingAddress': _getFullAddress(),
                   'items': itemsMap,
                   'totalAmount': finalTotal,
@@ -1131,59 +1177,46 @@ class _CheckoutPageState extends State<CheckoutPage>
   }
 
   Widget _buildUserInfoSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            spreadRadius: 0.5,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _userName,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _userPhone,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            _userEmail,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTextField(
+          label: "Họ và tên",
+          hint: "Nhập họ và tên người nhận",
+          controller: _nameController,
+        ),
+        _buildTextField(
+          label: "Số điện thoại",
+          hint: "Nhập số điện thoại người nhận",
+          controller: _phoneController,
+        ),
+        const SizedBox(height: 8),
+        // Giữ lại email và значки
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (_isStudent)
-                _buildUserBadge("Student", const Color(0xFF2E7D32)),
-              if (_isMember) const SizedBox(width: 8),
-              if (_isMember) _buildUserBadge("Member", AppColors.primary),
+              Text(
+                _userEmail,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  if (_isStudent)
+                    _buildUserBadge("Student", const Color(0xFF2E7D32)),
+                  if (_isMember) const SizedBox(width: 8),
+                  if (_isMember) _buildUserBadge("Member", AppColors.primary),
+                ],
+              ),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

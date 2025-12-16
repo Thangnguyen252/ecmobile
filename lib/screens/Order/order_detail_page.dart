@@ -1,29 +1,45 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:ecmobile/services/order_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-class OrderDetailPage extends StatelessWidget {
+class OrderDetailPage extends StatefulWidget {
   final Map<String, dynamic> orderData;
   final String orderId;
 
   const OrderDetailPage({Key? key, required this.orderData, required this.orderId}) : super(key: key);
 
-  // --- 1. HÀM FORMAT TIỀN ---
+  @override
+  State<OrderDetailPage> createState() => _OrderDetailPageState();
+}
+
+class _OrderDetailPageState extends State<OrderDetailPage> {
+  late Map<String, dynamic> _currentOrderData;
+  final OrderService _orderService = OrderService();
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentOrderData = widget.orderData;
+  }
+
+  // --- HÀM FORMAT TIỀN ---
   String formatCurrency(num price) {
     final format = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
     return format.format(price);
   }
 
-  // --- 2. HÀM FORMAT NGÀY ---
+  // --- HÀM FORMAT NGÀY ---
   String formatDate(Timestamp? timestamp) {
     if (timestamp == null) return '';
     return DateFormat('dd/MM/yyyy HH:mm').format(timestamp.toDate());
   }
 
-  // --- 3. HÀM DỊCH TRẠNG THÁI ---
+  // --- HÀM LẤY MÀU TRẠNG THÁI ---
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'đã thanh toán':
+      case 'đã giao':
       case 'completed':
         return Colors.green;
       case 'chờ xác nhận':
@@ -39,7 +55,7 @@ class OrderDetailPage extends StatelessWidget {
     }
   }
 
-  // --- 4. HÀM DỊCH PHƯƠNG THỨC THANH TOÁN ---
+  // --- HÀM DỊCH PHƯƠNG THỨC THANH TOÁN ---
   String _getPaymentMethodText(int method) {
     switch (method) {
       case 1: return 'Thanh toán khi nhận hàng (COD)';
@@ -49,16 +65,36 @@ class OrderDetailPage extends StatelessWidget {
     }
   }
 
+  // --- HÀM CẬP NHẬT TRẠNG THÁI ---
+  Future<void> _updateStatus(String newStatus) async {
+    setState(() => _isLoading = true);
+    try {
+      await _orderService.updateOrderStatus(widget.orderId, newStatus);
+      setState(() {
+        _currentOrderData['status'] = newStatus;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cập nhật trạng thái thành công: $newStatus'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi cập nhật: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    String status = orderData['status'] ?? 'Đang xử lý';
-    List<dynamic> items = orderData['items'] ?? [];
-    String customerName = orderData['customerName'] ?? 'Khách hàng';
-    String email = orderData['email'] ?? '';
-    String address = orderData['shippingAddress'] ?? 'Chưa cập nhật địa chỉ';
-    int paymentMethod = orderData['paymentMethod'] ?? 1;
+    String status = _currentOrderData['status'] ?? 'Đang xử lý';
+    List<dynamic> items = _currentOrderData['items'] ?? [];
+    String customerName = _currentOrderData['customerName'] ?? 'Khách hàng';
+    String email = _currentOrderData['email'] ?? '';
+    String address = _currentOrderData['shippingAddress'] ?? 'Chưa cập nhật địa chỉ';
+    int paymentMethod = _currentOrderData['paymentMethod'] ?? 1;
 
-    num totalAmount = orderData['totalAmount'] ?? 0;
+    num totalAmount = _currentOrderData['totalAmount'] ?? 0;
     if (totalAmount == 0 && items.isNotEmpty) {
       for (var item in items) {
         totalAmount += (item['price'] ?? 0) * (item['quantity'] ?? 1);
@@ -90,7 +126,7 @@ class OrderDetailPage extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Mã đơn hàng', style: TextStyle(color: Colors.grey[600])),
-                      Text(orderId.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(widget.orderId.toUpperCase(), style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -98,7 +134,7 @@ class OrderDetailPage extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Ngày đặt', style: TextStyle(color: Colors.grey[600])),
-                      Text(formatDate(orderData['createdAt'])),
+                      Text(formatDate(_currentOrderData['createdAt'])),
                     ],
                   ),
                   const Divider(height: 24),
@@ -227,7 +263,7 @@ class OrderDetailPage extends StatelessWidget {
               ),
             ),
 
-            // --- KHỐI 4: THANH TOÁN (ĐÃ SỬA LỖI OVERFLOW) ---
+            // --- KHỐI 4: THANH TOÁN ---
             Container(
               margin: const EdgeInsets.only(top: 10),
               color: Colors.white,
@@ -235,18 +271,15 @@ class OrderDetailPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // [SỬA] Thay Row bằng Column để tránh tràn màn hình
                   const Text('Phương thức thanh toán', style: TextStyle(fontWeight: FontWeight.w500)),
                   const SizedBox(height: 4),
                   Text(
                     _getPaymentMethodText(paymentMethod),
                     style: const TextStyle(fontSize: 15),
                   ),
-
                   const SizedBox(height: 12),
                   const Divider(),
                   const SizedBox(height: 12),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -276,6 +309,39 @@ class OrderDetailPage extends StatelessWidget {
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+      // --- KHỐI 5: THANH HÀNH ĐỘNG ---
+      bottomNavigationBar: _isLoading
+          ? const LinearProgressIndicator()
+          : Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          alignment: WrapAlignment.center,
+          children: [
+            if (status == 'Chờ xác nhận')
+              ElevatedButton.icon(
+                icon: const Icon(Icons.check_circle_outline), label: const Text('Xác nhận đơn'),
+                onPressed: () => _updateStatus('Đang giao'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+              ),
+
+            if (status == 'Đang giao')
+              ElevatedButton.icon(
+                icon: const Icon(Icons.local_shipping_outlined), label: const Text('Giao thành công'),
+                onPressed: () => _updateStatus('Đã giao'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+              ),
+
+            if (status != 'Đã hủy' && status != 'Đã giao')
+              ElevatedButton.icon(
+                icon: const Icon(Icons.cancel_outlined), label: const Text('Hủy đơn hàng'),
+                onPressed: () => _updateStatus('Đã hủy'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              ),
           ],
         ),
       ),
