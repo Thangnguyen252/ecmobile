@@ -89,8 +89,7 @@ class LoginScreen extends StatelessWidget {
                         // Nút Google -> Gắn hàm đăng nhập
                         _buildSocialButton(
                           assetPath: 'assets/images/google_logo.png',
-                          iconSize: 45.0,
-                          offsetX: 10.0,
+                          size: 45,
                           onTap: () {
                             GoogleAuthService.signInWithGoogle(context);
                           },
@@ -101,8 +100,7 @@ class LoginScreen extends StatelessWidget {
                         // Nút Facebook
                         _buildSocialButton(
                           assetPath: 'assets/images/facebook_logo.png',
-                          iconSize: 80.0,
-                          offsetX: 10.0, // Ví dụ: Dịch sang phải 10 đơn vị
+                          size: 75,
                         ),
                       ],
                     ),
@@ -174,45 +172,18 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  // Widget đã cập nhật: Thêm tham số offsetX, offsetY
   Widget _buildSocialButton({
     required String assetPath,
-    double iconSize = 40.0,
-    double offsetX = 0.0, // Mặc định là 0 (không dịch chuyển)
-    double offsetY = 0.0,
-    VoidCallback? onTap, // Thêm dòng này
+    VoidCallback? onTap,
+    double size = 45.0,
   }) {
-    return Transform.translate(
-      offset: Offset(offsetX, offsetY), // Áp dụng vị trí dịch chuyển
-      child: GestureDetector(
-        onTap: onTap,
-        child: SizedBox(
-          width: iconSize + 5,
-          height: iconSize + 5,
-          child: Stack(
-            children: [
-              // Lớp Bóng đổ
-              Positioned(
-                top: 2,
-                left: 1,
-                child: Image.asset(
-                  assetPath,
-                  width: iconSize,
-                  height: iconSize,
-                  color: Colors.black.withOpacity(0.25),
-                  fit: BoxFit.contain,
-                ),
-              ),
-              // Lớp Ảnh chính
-              Image.asset(
-                assetPath,
-                width: iconSize,
-                height: iconSize,
-                fit: BoxFit.contain,
-              ),
-            ],
-          ),
-        ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Image.asset(
+        assetPath,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
       ),
     );
   }

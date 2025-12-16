@@ -10,6 +10,7 @@ import 'order_history_page.dart';
 import 'event_page.dart';
 import '../Product_detail/product_list_page.dart';
 import '../Account/membership_rules_page.dart';
+import '../Product_detail/HotProduct.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -118,7 +119,15 @@ class _HomePageState extends State<HomePage> {
               children: [
                 _buildTopMenu(user),
                 _buildImageCarousel(),
-                _buildSectionHeader(title: 'SẢN PHẨM NỔI BẬT', onSeeMore: () {}),
+                _buildSectionHeader(
+                  title: 'SẢN PHẨM NỔI BẬT',
+                  onSeeMore: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const HotProductPage()),
+                    );
+                  },
+                ),
                 _buildFilterChips(),
                 if (user != null)
                   _buildFavoriteSection(
@@ -264,14 +273,40 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: primaryColor, size: 28), // Màu #FA661B
+              // --- BẮT ĐẦU PHẦN SỬA ĐỔI: Dùng Stack để đội nón ---
+              Stack(
+                clipBehavior: Clip.none, // Quan trọng: Để nón lòi ra ngoài không bị cắt
+                alignment: Alignment.topRight,
+                children: [
+                  // 1. Icon gốc
+                  Icon(icon, color: primaryColor, size: 28),
+
+                  // 2. Hình cái nón đè lên
+                  Positioned(
+                    top: -14,  // Đẩy lên trên một chút
+                    right: -14, // Đẩy sang phải một chút
+                    child: Transform.rotate(
+                      angle: 0.3, // Xoay nhẹ nón cho tự nhiên (radian)
+                      child: Image.network(
+                        'https://cdn-icons-png.flaticon.com/512/744/744546.png', // Link ảnh nón mẫu
+                        width: 28, // Kích thước nón (điều chỉnh cho vừa với icon 28)
+                        height: 25,
+                      ),
+                      // Nếu dùng ảnh trong máy thì đổi thành:
+                      // child: Image.asset('assets/images/santa_hat.png', width: 20),
+                    ),
+                  ),
+                ],
+              ),
+              // --- KẾT THÚC PHẦN SỬA ĐỔI ---
+
               SizedBox(height: 8),
               Text(
                 title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.black, // Màu #FA661B
+                  color: Colors.black,
                   fontWeight: FontWeight.w500,
                 ),
                 maxLines: 2,
@@ -800,7 +835,9 @@ class ProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- PHẦN ĐÃ CHỈNH SỬA: STACK ---
             Stack(
+              clipBehavior: Clip.none, // 1. Cho phép nón lòi ra ngoài viền
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
@@ -817,7 +854,7 @@ class ProductCard extends StatelessWidget {
                     child: Container(
                         padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration:
-                            BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(4)),
+                        BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(4)),
                         child: Text('Trả góp 0%',
                             style: TextStyle(color: Colors.blue.shade800, fontSize: 10, fontWeight: FontWeight.bold)))),
                 Positioned(
@@ -826,11 +863,30 @@ class ProductCard extends StatelessWidget {
                     child: Container(
                         padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                         decoration:
-                            BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(4)),
+                        BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(4)),
                         child: Text('Giảm 10%',
                             style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold)))),
+
+                // 2. Thêm nón vào góc trái (nằm cuối list children để đè lên trên cùng)
+                Positioned(
+                  top: -12,
+                  left: -12,
+                  child: Transform.rotate(
+                    angle: -0.5, // Chỉnh lại góc xoay nhẹ để khớp với việc đã lật ảnh
+                    child: Transform.scale(
+                      scaleX: -1, // <--- Dòng này giúp lật ngang hình ảnh (Mirror)
+                      child: Image.network(
+                        'https://cdn-icons-png.flaticon.com/512/744/744546.png',
+                        width: 28,
+                        height: 28,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
+            // --- HẾT PHẦN CHỈNH SỬA ---
+
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(12.0),

@@ -133,9 +133,9 @@ class _ProductListPageState extends State<ProductListPage> {
         child: TextField(
           decoration: InputDecoration(
             hintText: 'Tìm kiếm trong ${widget.categoryTitle}...',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 16),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
             prefixIcon: Icon(Icons.search, color: Colors.grey.shade600, size: 20),
           ),
         ),
