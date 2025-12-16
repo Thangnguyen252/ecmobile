@@ -1,4 +1,9 @@
+import 'dart:async';
+
+import 'package:ecmobile/models/cart_item_model.dart';
+import 'package:ecmobile/screens/Homepage/order_history_page.dart';
 import 'package:ecmobile/screens/Search/product_search_screen.dart';
+import 'package:ecmobile/services/cart_service.dart';
 import 'package:flutter/material.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/screens/Homepage/home_page.dart';
@@ -18,19 +23,35 @@ class _MainLayoutState extends State<MainLayout> {
   int _selectedIndex = 0;
 
   final TextEditingController _searchController = TextEditingController();
-  int _cartItemCount = 5; // Example value
+  int _cartItemCount = 0;
+  final CartService _cartService = CartService();
+  late StreamSubscription<List<CartItemModel>> _cartSubscription;
+
 
   static final List<Widget> _widgetOptions = <Widget>[
     const HomePage(),
     const Center(child: Text('Trang Danh mục')),
-    const Center(child: Text('Trang Đơn hàng')),
+    const OrderHistoryPage(), // Changed this from placeholder
     const AiSupportPage(),
     const AccountPage(),
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _cartSubscription = _cartService.getCartStream().listen((cartItems) {
+      if (mounted) {
+        setState(() {
+          _cartItemCount = cartItems.length;
+        });
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _searchController.dispose();
+    _cartSubscription.cancel();
     super.dispose();
   }
 
@@ -49,7 +70,7 @@ class _MainLayoutState extends State<MainLayout> {
     );
   }
 
-  void _navigateToSearch() {
+   void _navigateToSearch() {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -60,13 +81,19 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
+    // Only hide search bar for the "Đơn hàng" (Orders) tab, which is at index 2
+    final bool showSearchBar = _selectedIndex != 2;
+
     return Scaffold(
-      appBar: CustomSearchAppBar(
-        searchController: _searchController,
-        cartItemCount: _cartItemCount,
-        onCartPressed: _navigateToCart,
-        onSearchTap: _navigateToSearch,
-      ),
+      // Conditionally display the AppBar
+      appBar: showSearchBar
+          ? CustomSearchAppBar(
+              searchController: _searchController,
+              cartItemCount: _cartItemCount,
+              onCartPressed: _navigateToCart,
+              onSearchTap: _navigateToSearch,
+            )
+          : null, // No AppBar for the Orders page
       body: _widgetOptions.elementAt(_selectedIndex),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(

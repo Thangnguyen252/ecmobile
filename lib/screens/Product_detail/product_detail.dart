@@ -1,4 +1,6 @@
+import 'package:ecmobile/models/cart_item_model.dart';
 import 'package:ecmobile/models/customer_model.dart';
+import 'package:ecmobile/screens/Order/checkout_page.dart';
 import 'package:ecmobile/services/customer_service.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -1115,7 +1117,41 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               height: 45,
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), color: primaryColor),
               child: TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  if (_productData != null) {
+                    // Lấy thông tin sản phẩm
+                    final productName = _productData!['name'] ?? 'Sản phẩm';
+                    final productImage = _bannerImages.isNotEmpty ? _bannerImages[0] : '';
+                    final currentPrice = (_colors.isNotEmpty
+                        ? _colors[_selectedColorIndex]['price']
+                        : _productData!['basePrice'])
+                        .toDouble();
+                    final originalPrice =
+                        (_productData!['originalPrice'] ?? currentPrice).toDouble();
+
+                    // Tạo một CartItemModel
+                    final item = CartItemModel(
+                      cartItemId: '', // ID sẽ được tạo sau
+                      productId: widget.productId,
+                      productName: productName,
+                      productImage: productImage,
+                      currentPrice: currentPrice,
+                      originalPrice: originalPrice,
+                      quantity: _quantity,
+                      promos: [], // Thêm promos nếu có
+                    );
+
+                    // Điều hướng đến trang checkout
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CheckoutPage(
+                          itemsToCheckout: [item],
+                        ),
+                      ),
+                    );
+                  }
+                },
                 child: const Text('MUA NGAY', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),

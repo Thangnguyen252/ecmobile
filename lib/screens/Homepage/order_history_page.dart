@@ -50,6 +50,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerPr
         return Colors.blue;
       case 'giao thành công':
       case 'completed':
+      case 'đã giao':
         return Colors.green;
       case 'đã hủy':
       case 'cancelled':
@@ -71,6 +72,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerPr
         return 'Đang vận chuyển';
       case 'completed':
       case 'giao thành công':
+      case 'đã giao':
         return 'Giao thành công';
       case 'cancelled':
       case 'đã hủy':
@@ -161,10 +163,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerPr
 
     String statusToFilter = '';
     switch (_tabController.index) {
-      case 1: statusToFilter = 'chờ xác nhận'; break;
-      case 2: statusToFilter = 'đang giao'; break;
-      case 3: statusToFilter = 'đã giao'; break;
-      case 4: statusToFilter = 'đã hủy'; break;
+      case 1: statusToFilter = 'Chờ xác nhận'; break;
+      case 2: statusToFilter = 'Đang giao'; break;
+      case 3: statusToFilter = 'Đã giao'; break;
+      case 4: statusToFilter = 'Đã hủy'; break;
     }
 
     if (statusToFilter.isNotEmpty) {

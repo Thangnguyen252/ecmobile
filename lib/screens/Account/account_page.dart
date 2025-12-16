@@ -22,6 +22,13 @@ class AccountPage extends StatefulWidget {
 class _AccountPageState extends State<AccountPage> {
   final CustomerService _customerService = CustomerService();
 
+  @override
+  void initState() {
+    super.initState();
+    // Kiểm tra và cập nhật hạng thành viên khi trang được tải
+    _customerService.checkAndUpgradeMembership();
+  }
+
   String _formatPrice(double price) {
     final format = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ', decimalDigits: 0);
     return format.format(price).replaceAll(RegExp(r'\s+'), '');
@@ -59,6 +66,18 @@ class _AccountPageState extends State<AccountPage> {
           'icon': Icons.star,
           'color': Colors.amber,
           'backgroundColor': Colors.amber.withOpacity(0.1),
+        };
+      case 'bạch kim':
+        return {
+          'icon': Icons.diamond,
+          'color': Colors.cyan,
+          'backgroundColor': Colors.cyan.withOpacity(0.1),
+        };
+      case 'kim cương':
+        return {
+          'icon': Icons.verified,
+          'color': Colors.deepPurple,
+          'backgroundColor': Colors.deepPurple.withOpacity(0.1),
         };
       default:
         return {

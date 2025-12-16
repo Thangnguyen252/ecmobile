@@ -111,4 +111,44 @@ class CustomerService {
       rethrow;
     }
   }
+
+  // Hàm kiểm tra và cập nhật hạng thành viên
+  Future<void> checkAndUpgradeMembership() async {
+    final User? currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+
+    try {
+      final docRef = _db.collection('customers').doc(currentUser.uid);
+      final snapshot = await docRef.get();
+
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        num totalSpending = data['totalSpending'] ?? 0;
+        String currentRank = data['membershipRank'] ?? 'Đồng';
+
+        String newRank = _getMembershipRank(totalSpending);
+
+        if (currentRank != newRank) {
+          await docRef.update({'membershipRank': newRank});
+          print("✨ Hạng thành viên đã được cập nhật: $currentRank -> $newRank");
+        }
+      }
+    } catch (e) {
+      print("Lỗi khi kiểm tra hạng thành viên: $e");
+    }
+  }
+
+  String _getMembershipRank(num totalSpending) {
+    if (totalSpending >= 50000000) {
+      return 'Kim cương';
+    } else if (totalSpending >= 20000000) {
+      return 'Bạch kim';
+    } else if (totalSpending >= 10000000) {
+      return 'Vàng';
+    } else if (totalSpending >= 1000000) {
+      return 'Bạc';
+    } else {
+      return 'Đồng';
+    }
+  }
 }
