@@ -1,3 +1,4 @@
+import 'package:ecmobile/screens/Homepage/order_history_page.dart';
 import 'package:ecmobile/screens/Login/login_screen.dart';
 import 'package:ecmobile/services/google_auth_service.dart';
 import 'package:flutter/material.dart';
@@ -319,7 +320,14 @@ class _AccountPageState extends State<AccountPage> {
             icon: Icons.receipt_long_outlined,
             title: "Lịch sử đơn hàng",
             subtitle: "Xem lại các đơn hàng cũ",
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OrderHistoryPage(),
+                ),
+              );
+            },
           ),
           divider,
           _buildMenuItem(

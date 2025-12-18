@@ -52,6 +52,7 @@ dependencies:
   firebase_storage: ^13.0.4
 
 dev_dependencies:
+  flutter_native_splash: ^2.4.0
   flutter_test:
     sdk: flutter
 
@@ -124,5 +125,6 @@ flutter_launcher_icons:
   android: true
   ios: true
   # ĐƯỜNG DẪN ĐẾN ICON CỦA BẠN (Đã chuẩn bị ở B1)
-  image_path: "assets/images/logo_darter_orange.jpg"
+  image_path: "assets/images/logo_darter.png"
   min_sdk_android: 21 # SDK tối thiểu của Android.
+

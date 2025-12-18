@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../Order/order_detail_page.dart'; // Đảm bảo đã import trang chi tiết
-
+import 'package:ecmobile/theme/app_colors.dart'; // <--- Thêm dòng này
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({Key? key}) : super(key: key);
 
@@ -103,16 +103,16 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> with SingleTickerPr
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Lịch sử đơn hàng', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        title: const Text('Lịch sử đơn hàng', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.black,
         elevation: 0.5,
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
-          labelColor: Colors.orange,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: Colors.orange,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white,
+          indicatorColor: Colors.white,
           tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
         ),
       ),

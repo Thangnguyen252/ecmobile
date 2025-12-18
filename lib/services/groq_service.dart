@@ -1,122 +1,184 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart'; // Cần import intl để format tiền tệ
+import 'package:intl/intl.dart';
 import '../models/chat_model.dart';
 
 class GroqService {
-  // --- KEY GROQ (GIỮ NGUYÊN CỦA BẠN) ---
-  static const String _apiKey = 'gsk_vPmCqg2vpihaPmpJdEMOWGdyb3FYqYnZKvu64kHxLyV7KUVXw2gG';
-
+  // --- CẤU HÌNH API ---
+  static const String _apiKey = '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';
   static const String _apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
+
+  // Model Llama 3 8B: Nhanh, nhẹ, tối ưu cho phản hồi tức thì
   static const String _model = 'llama-3.3-70b-versatile';
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Helper: Format tiền tệ VNĐ (Ví dụ: 30.590.000)
+  // Format tiền tệ: 30,590,000 VNĐ
   String _formatCurrency(num price) {
     final format = NumberFormat("#,###", "vi_VN");
     return format.format(price);
   }
 
-  // 1. Hàm xử lý dữ liệu thông minh (Smart Parser)
-  Future<String> _getProductContext() async {
+  // --- LOGIC LỌC SẢN PHẨM THÔNG MINH ---
+  Future<String> _getProductContext(String userMessage) async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection('products').limit(50).get();
+      // 1. Tải nhiều sản phẩm hơn để đảm bảo không bị sót category (tăng limit lên 100-200)
+      QuerySnapshot snapshot = await _firestore.collection('products').limit(200).get();
 
       if (snapshot.docs.isEmpty) return "Hiện chưa có dữ liệu sản phẩm nào.";
 
       StringBuffer buffer = StringBuffer();
-      buffer.writeln("DANH SÁCH SẢN PHẨM CHI TIẾT:");
+      buffer.writeln("DANH SÁCH SẢN PHẨM HIỆN CÓ TRONG KHO:");
+
+      String msg = userMessage.toLowerCase();
+      int count = 0;
+      // Giới hạn số lượng sản phẩm gửi cho AI mỗi lần chat để tiết kiệm Token
+      const int maxProductsToSend = 10;
+
+      // 2. TẠO TỪ ĐIỂN ÁNH XẠ (MAPPING) TỪ KHÓA -> CATEGORY ID
+      // Dựa trên dữ liệu thật bạn cung cấp
+      bool needLaptop = msg.contains("laptop") || msg.contains("máy tính") || msg.contains("pc");
+      bool needPhone = msg.contains("điện thoại") || msg.contains("mobile") || msg.contains("iphone") || msg.contains("smartphone");
+      bool needAudio = msg.contains("tai nghe") || msg.contains("âm thanh") || msg.contains("headphone") || msg.contains("loa");
+      bool needMonitor = msg.contains("màn hình") || msg.contains("monitor") || msg.contains("display");
+
+      // Nếu khách không nhắc cụ thể loại nào, mặc định là cần tìm tất cả (để AI giới thiệu)
+      bool isGeneralInquiry = !needLaptop && !needPhone && !needAudio && !needMonitor;
 
       for (var doc in snapshot.docs) {
+        if (count >= maxProductsToSend) break;
+
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-        // 1. Thông tin cơ bản
-        String name = data['name'] ?? 'Sản phẩm';
-        String brand = data['brand'] ?? '';
-        String category = data['categoryId'] ?? '';
+        // Lấy dữ liệu an toàn
+        String id = data['categoryId'] ?? '';
+        String name = (data['name'] ?? '').toString();
+        String brand = (data['brand'] ?? '').toString();
 
-        // 2. Xử lý GIÁ TIỀN & PHIÊN BẢN (Logic quan trọng)
-        // Dữ liệu mẫu cho thấy có 'variants' (iPhone, Màn hình) hoặc chỉ có 'basePrice' (Loa, Laptop)
-        String priceInfo = "";
-        List<dynamic> variants = data['variants'] ?? [];
+        String lowerName = name.toLowerCase();
+        String lowerBrand = brand.toLowerCase();
 
-        if (variants.isNotEmpty) {
-          // Trường hợp 1: Có nhiều phiên bản (Ví dụ iPhone: 256GB, 512GB...)
-          List<String> variantDetails = [];
-          for (var v in variants) {
-            var attrs = v['attributes'] ?? {};
-            String color = attrs['color'] ?? '';
-            String storage = attrs['storage'] ?? ''; // Dung lượng (nếu có)
-            num vPrice = v['price'] ?? 0;
+        bool isMatch = false;
 
-            String detail = "$color";
-            if (storage.isNotEmpty) detail += " $storage";
-            detail += ": ${_formatCurrency(vPrice)} VNĐ";
+        // 3. LOGIC SO KHỚP 3 TẦNG:
+        // Tầng 1: So khớp Category ID (Quan trọng nhất)
+        if (needLaptop && id == 'cate_laptop') isMatch = true;
+        if (needPhone && id == 'cate_phone') isMatch = true;
+        if (needAudio && id == 'cate_audio') isMatch = true;
+        if (needMonitor && id == 'cate_monitor') isMatch = true;
 
-            variantDetails.add(detail);
+        // Tầng 2: So khớp Tên hoặc Hãng (Nếu khách hỏi "iPhone" thì cate_phone tự dính, nhưng check thêm cho chắc)
+        if (!isMatch) {
+          if (lowerName.contains(msg) || lowerBrand.contains(msg)) {
+            isMatch = true;
           }
-          priceInfo = "Các phiên bản: ${variantDetails.join(' | ')}";
-        } else {
-          // Trường hợp 2: Sản phẩm đơn (Loa, Laptop) -> Dùng basePrice
-          num basePrice = data['basePrice'] ?? data['originalPrice'] ?? 0;
-          priceInfo = "Giá: ${_formatCurrency(basePrice)} VNĐ";
         }
 
-        // 3. Xử lý THÔNG SỐ KỸ THUẬT (Specifications)
-        // Map này chứa thông tin quan trọng như Chip, Ram, Pin...
-        String specInfo = "";
-        Map<String, dynamic> specs = data['specifications'] ?? {};
-        if (specs.isNotEmpty) {
-          List<String> specList = [];
-          specs.forEach((key, value) {
-            // Làm đẹp key một chút (chip -> Chip, battery_life -> Battery Life)
-            String cleanKey = key.replaceAll('_', ' ').toUpperCase();
-            specList.add("$cleanKey: $value");
-          });
-          specInfo = specList.join(", ");
+        // Tầng 3: Nếu khách hỏi chung chung ("bạn có gì?", "tư vấn đi"), lấy đại diện mỗi loại 2 cái
+        if (isGeneralInquiry && count < 6) {
+          isMatch = true;
         }
 
-        // 4. Ghi vào bộ nhớ đệm cho AI
-        buffer.writeln("---");
-        buffer.writeln("Sản phẩm: $name ($brand - $category)");
-        buffer.writeln(priceInfo);
-        if (specInfo.isNotEmpty) buffer.writeln("Thông số: $specInfo");
-        buffer.writeln("Mô tả: ${data['description'] ?? ''}");
+        if (isMatch) {
+          _appendProductToBuffer(buffer, data, name, brand);
+          count++;
+        }
       }
+
+      // Trường hợp đặc biệt: Không tìm thấy gì khớp, nhưng khách đang hỏi danh mục có tồn tại
+      if (count == 0) {
+        if (needLaptop) return "Hệ thống ghi nhận có Laptop, nhưng chưa tìm thấy mẫu cụ thể. Hãy báo khách là có bán Laptop.";
+        // Lấy ngẫu nhiên vài sản phẩm để AI không bị trống thông tin
+        buffer.writeln("(Gợi ý sản phẩm nổi bật khác vì không tìm thấy từ khóa chính xác)");
+        for (var i = 0; i < 3 && i < snapshot.docs.length; i++) {
+          Map<String, dynamic> data = snapshot.docs[i].data() as Map<String, dynamic>;
+          _appendProductToBuffer(buffer, data, data['name'].toString(), data['brand'].toString());
+        }
+      }
+
       return buffer.toString();
     } catch (e) {
       print("Lỗi parse dữ liệu: $e");
-      return "Lỗi đọc dữ liệu sản phẩm.";
+      return "Lỗi đọc dữ liệu: $e";
     }
   }
 
-  // 2. Hàm gửi tin nhắn (Giữ nguyên logic gọi API)
+  // Hàm format text gọn gàng gửi cho AI
+  void _appendProductToBuffer(StringBuffer buffer, Map<String, dynamic> data, String name, String brand) {
+    // Xử lý giá tiền (Ưu tiên giá variants nếu có)
+    String priceInfo = "";
+    List<dynamic> variants = data['variants'] ?? [];
+
+    if (variants.isNotEmpty) {
+      List<String> variantDetails = [];
+      for (var v in variants) {
+        var attrs = v['attributes'] ?? {};
+        String info = "";
+        // Ghép các thuộc tính (Màu, Dung lượng...)
+        attrs.forEach((k, val) {
+          if (k != 'sku') info += "$val ";
+        });
+
+        num vPrice = v['price'] ?? 0;
+        variantDetails.add("$info: ${_formatCurrency(vPrice)}");
+      }
+      priceInfo = "Giá các bản: ${variantDetails.join(' | ')}";
+    } else {
+      // Giá cơ bản nếu không có biến thể
+      num basePrice = data['basePrice'] ?? data['originalPrice'] ?? 0;
+      priceInfo = "Giá: ${_formatCurrency(basePrice)} VNĐ";
+    }
+
+    // Xử lý thông số kỹ thuật (Chỉ lấy vài cái quan trọng)
+    String specInfo = "";
+    Map<String, dynamic> specs = data['specifications'] ?? {};
+    if (specs.isNotEmpty) {
+      List<String> importantSpecs = [];
+      // Ưu tiên hiển thị các thông số quan trọng tùy loại
+      if (specs.containsKey('cpu')) importantSpecs.add("CPU: ${specs['cpu']}");
+      if (specs.containsKey('ram')) importantSpecs.add("RAM: ${specs['ram']}");
+      if (specs.containsKey('screen')) importantSpecs.add("Màn: ${specs['screen']}");
+      if (specs.containsKey('panel')) importantSpecs.add("Tấm nền: ${specs['panel']}"); // Cho màn hình
+      if (specs.containsKey('battery_life')) importantSpecs.add("Pin: ${specs['battery_life']}"); // Cho tai nghe
+
+      // Nếu không bắt được key cụ thể, lấy 3 cái đầu tiên
+      if (importantSpecs.isEmpty) {
+        specs.entries.take(3).forEach((e) => importantSpecs.add("${e.key}: ${e.value}"));
+      }
+      specInfo = importantSpecs.join(", ");
+    }
+
+    buffer.writeln("- $name (Hãng: $brand)");
+    buffer.writeln("  $priceInfo");
+    if (specInfo.isNotEmpty) buffer.writeln("  Cấu hình: $specInfo");
+    buffer.writeln("---");
+  }
+
+  // --- GỬI TIN NHẮN ---
   Future<String> sendMessageToGroq(String userMessage, List<ChatMessage> history) async {
     try {
-      String productContext = await _getProductContext();
+      String productContext = await _getProductContext(userMessage);
 
-      // Cập nhật System Prompt để AI chú ý vào giá từng phiên bản
+      // Prompt được tinh chỉnh để xử lý việc "Cửa hàng có kinh doanh không"
       String systemPrompt = """
-      Bạn là trợ lý ảo bán hàng của EC Mobile.
-      Dữ liệu sản phẩm được cung cấp bên dưới bao gồm: Tên, Giá (có thể có nhiều phiên bản), Thông số kỹ thuật.
+      Bạn là trợ lý ảo của cửa hàng EC Mobile.
       
-      YÊU CẦU:
-      1. Khi khách hỏi giá, hãy kiểm tra xem có các "phiên bản" khác nhau không. Nếu có, hãy liệt kê giá của từng phiên bản (ví dụ: Bản 256GB giá A, bản 512GB giá B).
-      2. Nếu khách hỏi cấu hình (pin, chip, ram...), hãy tìm trong phần "Thông số".
-      3. Trả lời ngắn gọn, chính xác, dùng tiếng Việt.
-      4. Đơn vị tiền tệ là VNĐ.
-      5. Hãy cố gắng trả lời với tone giọng của một nhân viên bán hàng bình thường. Nếu khách hàng hỏi về một sản phẩm hoặc một loại sản phẩm không có trong dữ liệu, hãy nói là bên cửa hàng không
-      kinh doanh sản phẩm đó, và đề xuất một loại sản phẩm tương tự. đừng trả lời về dữ liệu sản phẩm chúng tôi không có, chỉ đơn giản là chúng tôi không kinh doanh mặt hàng ấy.
-
+      DỮ LIỆU SẢN PHẨM KHỚP VỚI CÂU HỎI:
       $productContext
+      
+      HƯỚNG DẪN TRẢ LỜI:
+      1. Cửa hàng CÓ kinh doanh: Laptop, Điện thoại, Màn hình, Tai nghe. Nếu khách hỏi có bán các loại này không, hãy trả lời là CÓ và giới thiệu các sản phẩm trong danh sách trên.
+      2. Dựa vào danh sách trên để tư vấn chi tiết (giá, cấu hình).
+      3. Nếu trong danh sách trên không có sản phẩm cụ thể khách tìm (ví dụ khách tìm 'MacBook' nhưng danh sách chỉ có 'Lenovo'), hãy khéo léo giới thiệu sản phẩm đang có (Lenovo).
+      4. Trả lời ngắn gọn, thân thiện, không quá 3 câu.
       """;
 
       List<Map<String, String>> messages = [];
       messages.add({"role": "system", "content": systemPrompt});
 
-      int historyLimit = history.length > 6 ? 6 : history.length;
+      // Lấy lịch sử chat (tối đa 4 tin gần nhất)
+      int historyLimit = history.length > 4 ? 4 : history.length;
       var recentHistory = history.sublist(history.length - historyLimit);
 
       for (var m in recentHistory) {
@@ -136,8 +198,8 @@ class GroqService {
         body: jsonEncode({
           'model': _model,
           'messages': messages,
-          'temperature': 0.6, // Giảm temperature để AI trả lời chính xác giá hơn
-          'max_tokens': 1024,
+          'temperature': 0.5,
+          'max_tokens': 800,
         }),
       );
 
@@ -145,13 +207,13 @@ class GroqService {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
         return data['choices'][0]['message']['content'];
       } else {
-        print("Lỗi Groq: ${response.body}");
-        return "Hệ thống đang bảo trì.";
+        print("Error Code: ${response.statusCode} - Body: ${response.body}");
+        return "Xin lỗi, tôi đang gặp chút trục trặc. Bạn thử hỏi lại nhé.";
       }
 
     } catch (e) {
-      print("Lỗi Exception: $e");
-      return "Lỗi kết nối.";
+      print("Exception: $e");
+      return "Lỗi kết nối mạng, vui lòng kiểm tra lại.";
     }
   }
 }

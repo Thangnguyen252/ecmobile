@@ -17,8 +17,6 @@ class ChatDetailPage extends StatefulWidget {
 class _ChatDetailPageState extends State<ChatDetailPage> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
-  // Sử dụng GroqService
   final GroqService _groqService = GroqService();
 
   late List<ChatMessage> _messages;
@@ -27,7 +25,7 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
   @override
   void initState() {
     super.initState();
-    _messages = widget.session.messages;
+    _messages = widget.session.messages; // Load tin nhắn ban đầu từ session truyền vào
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
   }
 
@@ -54,10 +52,10 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     _controller.clear();
     _scrollToBottom();
 
-    // Lưu tin nhắn User vào Firebase
+    // 1. Lưu tin nhắn User vào Firebase NGAY LẬP TỨC
     await _updateFirestore();
 
-    // Gọi Groq AI
+    // 2. Gọi AI
     String aiResponse = await _groqService.sendMessageToGroq(
         text,
         _messages.sublist(0, _messages.length - 1)
@@ -71,31 +69,43 @@ class _ChatDetailPageState extends State<ChatDetailPage> {
     });
     _scrollToBottom();
 
-    // Lưu tin nhắn AI vào Firebase
+    // 3. Lưu tin nhắn AI vào Firebase
     await _updateFirestore();
   }
 
+  // Hàm cập nhật Firebase
   Future<void> _updateFirestore() async {
-    await FirebaseFirestore.instance
-        .collection('chat_sessions')
-        .doc(widget.session.sessionId)
-        .update({
-      'messages': _messages.map((e) => e.toJson()).toList(),
-      'lastUpdated': DateFormat('HH:mm dd/MM/yyyy').format(DateTime.now()),
-    });
+    try {
+      await FirebaseFirestore.instance
+          .collection('chat_sessions')
+          .doc(widget.session.sessionId)
+          .update({
+        'messages': _messages.map((e) => e.toJson()).toList(),
+        'lastUpdated': DateFormat('HH:mm dd/MM/yyyy').format(DateTime.now()),
+      });
+    } catch (e) {
+      print("Lỗi lưu tin nhắn: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // --- CẬP NHẬT TIÊU ĐỀ THEO YÊU CẦU ---
-        title: Text(
-          widget.session.sessionName,
-          style: const TextStyle(
-            fontSize: 19, // Nhỏ hơn ~20% (mặc định là 20)
-            fontWeight: FontWeight.bold, // In đậm
-          ),
+        // Sử dụng StreamBuilder ở đây để nếu User đổi tên Chat ở màn hình trước,
+        // hoặc đổi trên web, thì ở đây cũng tự cập nhật tên mới luôn.
+        title: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance.collection('chat_sessions').doc(widget.session.sessionId).snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasData && snapshot.data!.exists) {
+              var data = snapshot.data!.data() as Map<String, dynamic>;
+              return Text(
+                data['sessionName'] ?? widget.session.sessionName,
+                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+              );
+            }
+            return Text(widget.session.sessionName);
+          },
         ),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,

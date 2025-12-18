@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../../models/chat_model.dart';
 import 'chat_detail_page.dart';
@@ -13,51 +14,121 @@ class AiSupportPage extends StatefulWidget {
 }
 
 class _AiSupportPageState extends State<AiSupportPage> {
-  // Giả sử userId của người đang đăng nhập.
-  final String currentUserId = "user_thangvh2004";
-
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  User? get currentUser => _auth.currentUser;
+
+  // --- HÀM TẠO SESSION ĐÃ SỬA LỖI ---
   void _createNewSession() async {
-    String sessionId = DateTime.now().millisecondsSinceEpoch.toString();
-    String timeNow = DateFormat('HH:mm dd/MM/yyyy').format(DateTime.now());
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng đăng nhập để tạo cuộc trò chuyện")),
+      );
+      return;
+    }
 
-    ChatSession newSession = ChatSession(
-      sessionId: sessionId,
-      sessionName: "Cuộc trò chuyện mới",
-      customerName: "Nguyễn Quang Thắng",
-      userId: currentUserId,
-      lastUpdated: timeNow,
-      messages: [
-        ChatMessage(
-            content: "Chào bạn! 👋 Tôi là Trợ lý Ảo của app. Tôi ở đây để giúp bạn tìm ra những sản phẩm phù hợp nhất.",
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      String sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+      String timeNow = DateFormat('HH:mm dd/MM/yyyy').format(DateTime.now());
+
+      // KHỞI TẠO GIÁ TRỊ MẶC ĐỊNH
+      String customerName = "Khách hàng";
+      String email = currentUser!.email ?? "";
+      String customerCode = "";
+
+      try {
+        Map<String, dynamic>? userData;
+
+        // CÁCH 1: Thử lấy theo Document ID (ID của doc trùng với UID)
+        DocumentSnapshot docRef = await _firestore.collection('users').doc(currentUser!.uid).get();
+
+        if (docRef.exists) {
+          userData = docRef.data() as Map<String, dynamic>;
+        } else {
+          // CÁCH 2 (QUAN TRỌNG): Nếu Cách 1 thất bại, tìm theo trường 'uid' bên trong data
+          QuerySnapshot query = await _firestore
+              .collection('users')
+              .where('uid', isEqualTo: currentUser!.uid)
+              .limit(1)
+              .get();
+
+          if (query.docs.isNotEmpty) {
+            userData = query.docs.first.data() as Map<String, dynamic>;
+          }
+        }
+
+        // NẾU TÌM THẤY DATA, GÁN GIÁ TRỊ
+        if (userData != null) {
+          print("DEBUG: Tìm thấy dữ liệu user: $userData"); // In ra log để kiểm tra
+          customerName = userData['fullName'] ?? userData['customerName'] ?? "Khách hàng";
+          email = userData['email'] ?? email;
+          customerCode = userData['customerCode'] ?? "";
+        } else {
+          print("DEBUG: Không tìm thấy thông tin user trong collection users");
+        }
+
+      } catch (e) {
+        print("DEBUG Lỗi lấy user: $e");
+      }
+
+      // Tạo Session
+      ChatSession newSession = ChatSession(
+        sessionId: sessionId,
+        sessionName: "Tư vấn: $customerName",
+        customerName: customerName,
+        userId: currentUser!.uid,
+        email: email,               // Đã có dữ liệu
+        customerCode: customerCode, // Đã có dữ liệu
+        lastUpdated: timeNow,
+        messages: [
+          ChatMessage(
+            content: "Chào bạn $customerName! 👋 Tôi là Trợ lý Ảo EC Mobile. Tôi có thể giúp gì cho bạn?",
             role: "ai",
-            timestamp: timeNow
-        )
-      ],
-    );
+            timestamp: timeNow,
+          )
+        ],
+      );
 
-    await _firestore.collection('chat_sessions').doc(sessionId).set(newSession.toJson());
+      // Lưu vào Firestore
+      await _firestore.collection('chat_sessions').doc(sessionId).set(newSession.toJson());
 
-    if (!mounted) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => ChatDetailPage(session: newSession)),
-    );
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => ChatDetailPage(session: newSession)),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      print("Lỗi tạo session: $e");
+    }
   }
 
+  // ... (Giữ nguyên các hàm _deleteSession, _editSessionName, build cũ) ...
+  // NẾU CẦN CODE ĐẦY ĐỦ CỦA CÁC HÀM KIA HÃY BÁO TÔI, CÒN KHÔNG THÌ BẠN CHỈ CẦN THAY HÀM _createNewSession LÀ ĐƯỢC.
+
+  // --- CODE PHẦN CÒN LẠI ĐỂ BẠN COPY CHO TIỆN ---
   void _deleteSession(String sessionId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Xóa cuộc trò chuyện?"),
-        content: const Text("Bạn có chắc chắn muốn xóa lịch sử này không?"),
+        content: const Text("Dữ liệu sẽ mất vĩnh viễn."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
           TextButton(
-            onPressed: () {
-              _firestore.collection('chat_sessions').doc(sessionId).delete();
-              Navigator.pop(context);
+            onPressed: () async {
+              await _firestore.collection('chat_sessions').doc(sessionId).delete();
+              if (mounted) Navigator.pop(context);
             },
             child: const Text("Xóa", style: TextStyle(color: Colors.red)),
           ),
@@ -71,16 +142,22 @@ class _AiSupportPageState extends State<AiSupportPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Đổi tên cuộc trò chuyện"),
-        content: TextField(controller: nameController, decoration: const InputDecoration(hintText: "Nhập tên mới")),
+        title: const Text("Đổi tên"),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(hintText: "Nhập tên mới"),
+          autofocus: true,
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Hủy")),
           TextButton(
-            onPressed: () {
-              if (nameController.text.isNotEmpty) {
-                _firestore.collection('chat_sessions').doc(sessionId).update({'sessionName': nameController.text});
+            onPressed: () async {
+              if (nameController.text.trim().isNotEmpty) {
+                await _firestore.collection('chat_sessions').doc(sessionId).update({
+                  'sessionName': nameController.text.trim()
+                });
               }
-              Navigator.pop(context);
+              if (mounted) Navigator.pop(context);
             },
             child: const Text("Lưu"),
           ),
@@ -91,12 +168,18 @@ class _AiSupportPageState extends State<AiSupportPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (currentUser == null) {
+      return const Scaffold(body: Center(child: Text("Vui lòng đăng nhập")));
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('chat_sessions')
-            .where('userId', isEqualTo: currentUserId)
+            .where('userId', isEqualTo: currentUser!.uid)
+        // LƯU Ý: Nếu app báo lỗi Index, hãy check log để lấy link tạo Index
+        // .orderBy('lastUpdated', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -126,7 +209,6 @@ class _AiSupportPageState extends State<AiSupportPage> {
               return Card(
                 color: Colors.white,
                 elevation: 2,
-
                 margin: const EdgeInsets.only(bottom: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 child: InkWell(
@@ -158,18 +240,18 @@ class _AiSupportPageState extends State<AiSupportPage> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                "${session.lastUpdated}",
+                                session.lastUpdated,
                                 style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                               ),
                             ],
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.grey),
+                          icon: const Icon(Icons.edit, size: 20, color: Colors.blueGrey),
                           onPressed: () => _editSessionName(session.sessionId, session.sessionName),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                          icon: const Icon(Icons.delete_outline, size: 20, color: Colors.redAccent),
                           onPressed: () => _deleteSession(session.sessionId),
                         ),
                       ],

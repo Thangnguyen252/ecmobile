@@ -1,5 +1,3 @@
-// lib/screens/login_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/screens/Login/register_screen.dart';
@@ -16,11 +14,34 @@ class LoginScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
+          // 1. Lớp nền màu cam (Giữ nguyên)
           Container(
             height: size.height,
             width: size.width,
             color: AppColors.primary,
           ),
+
+          // 2. Lớp ảnh nền (Đã sửa để phóng to dễ dàng)
+          Positioned(
+            top: 0,
+            left: -5,
+            right: 10,
+            height: size.height * 0.35, // Giữ nguyên chiều cao bằng vùng màu cam (để căn giữa chuẩn)
+            child: Container(
+              alignment: Alignment.center, // Căn giữa ảnh trong vùng cam
+
+              // Dùng Transform.scale để phóng to ảnh mà không làm lệch vị trí
+              child: Transform.scale(
+                scale: 1.5, // <--- CHỈNH SỐ NÀY: 1.0 là gốc, 1.5 là to gấp rưỡi.
+                child: Image.asset(
+                  'assets/images/darterxoanen.png',
+                  fit: BoxFit.contain, // Giữ tỷ lệ ảnh
+                ),
+              ),
+            ),
+          ),
+
+          // 3. Khung trắng nội dung (Giữ nguyên)
           Positioned(
             top: size.height * 0.35,
             child: Container(
@@ -110,6 +131,7 @@ class LoginScreen extends StatelessWidget {
             ),
           ),
 
+          // 4. Logo tròn ở giữa (Giữ nguyên)
           Positioned(
             top: size.height * 0.28,
             left: (size.width - 100) / 2,

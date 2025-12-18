@@ -19,6 +19,7 @@ class _FavoriteProductsPageState extends State<FavoriteProductsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sản phẩm yêu thích'),
+        titleTextStyle:TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
         backgroundColor: const Color(0xFFFA661B),
       ),
       body: StreamBuilder<CustomerModel?>(
