@@ -13,6 +13,7 @@ import '../Account/membership_rules_page.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../Product_detail/HotProduct.dart';
+import '../Category/category_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -124,10 +125,7 @@ class _HomePageState extends State<HomePage> {
                 _buildSectionHeader(
                   title: 'SẢN PHẨM NỔI BẬT',
                   onSeeMore: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const HotProductPage()),
-                    );
+                    _navigateToHotProducts();
                   },
                 ),
                 _buildFilterChips(),
@@ -224,7 +222,7 @@ class _HomePageState extends State<HomePage> {
             color: primaryColor.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -233,28 +231,52 @@ class _HomePageState extends State<HomePage> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 1. Nút Hạng thành viên
           Expanded(
             child: _buildMenuItem(Icons.diamond, 'Hạng thành viên', () {
-                if (user != null) {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => MembershipRulesPage(currentRank: user.membershipRank)));
-                } else {
-                    // Show a message or navigate to login
-                }
+              if (user != null) {
+                Navigator.push(
+                  context,
+                  FadeScaleRoute(
+                    page: MembershipRulesPage(currentRank: user.membershipRank),
+                  ),
+                );
+              } else {
+                // Xử lý khi chưa đăng nhập (Ví dụ: thông báo hoặc chuyển trang Login)
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Vui lòng đăng nhập để xem hạng thành viên')),
+                );
+              }
             }),
           ),
+
+          // 2. Nút Flash Sale
           Expanded(
             child: _buildMenuItem(Icons.flash_on, 'Flash Sale', () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const FlashSalePage()));
+              Navigator.push(
+                context,
+                FadeScaleRoute(page: const FlashSalePage()),
+              );
             }),
           ),
+
+          // 3. Nút Lịch sử mua hàng
           Expanded(
             child: _buildMenuItem(Icons.receipt_long, 'Lịch sử mua hàng', () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const OrderHistoryPage()));
+              Navigator.push(
+                context,
+                FadeScaleRoute(page: const OrderHistoryPage()),
+              );
             }),
           ),
+
+          // 4. Nút Sự kiện
           Expanded(
             child: _buildMenuItem(Icons.event_note, 'Sự kiện', () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const EventPage()));
+              Navigator.push(
+                context,
+                FadeScaleRoute(page: const EventPage()),
+              );
             }),
           ),
         ],
@@ -754,9 +776,34 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
+  void _navigateToHotProducts() {  // Fade Scale Edit Effect in Code
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => const HotProductPage(),
+        transitionDuration: const Duration(milliseconds: 500),
+        reverseTransitionDuration: const Duration(milliseconds: 500),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const curve = Curves.fastOutSlowIn;
+
+          var fadeAnimation = animation.drive(Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: curve)));
+
+          var scaleAnimation = animation.drive(Tween(begin: 0.9, end: 1.0).chain(CurveTween(curve: curve)));
+
+          return FadeTransition(
+            opacity: fadeAnimation,
+            child: ScaleTransition(
+              scale: scaleAnimation,
+              child: child,
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   Widget _buildFilterChips() {
-    final filters = ['Điện thoại', 'Laptop', 'Bộ PC', 'Linh kiện'];
+    final filters = ['Điện thoại', 'Laptop', 'PC', 'Linh kiện'];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -820,11 +867,10 @@ class ProductCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        // --- SỬA ĐỔI: Dùng SlideFromRightRoute thay cho MaterialPageRoute ---
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => ProductDetailScreen(productId: productId),
-          ),
+          SlideFromRightRoute(page: ProductDetailScreen(productId: productId)),
         );
       },
       child: Container(
@@ -895,23 +941,39 @@ class ProductCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
-                        child: Text(name,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryColor),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis)),
-                    SizedBox(height: 5),
-                    Text(specs,
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    Text(name,  // Removed Flexible wrapper
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: primaryColor,
+                            height: 1.3),  // Added line height
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
-                    SizedBox(height: 2),
+                    SizedBox(height: 6),  // Increased from 5 to 6
+                    Text(specs,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            height: 1.2),  // Added line height
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                    SizedBox(height: 4),  // Increased from 2 to 4
                     Text(formatCurrency(rawPrice),
-                        style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                        style: TextStyle(
+                            color: primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            height: 1.2)),  // Added line height
+                    SizedBox(height: 2),  // Added spacing between prices
                     Text(formatCurrency(oldPrice),
-                        style: TextStyle(color: Colors.grey.shade500, decoration: TextDecoration.lineThrough, fontSize: 12)),
-                    SizedBox(height: 4),
+                        style: TextStyle(
+                            color: Colors.grey.shade500,
+                            decoration: TextDecoration.lineThrough,
+                            fontSize: 12,
+                            height: 1.2)),  // Added line height
+                    SizedBox(height: 6),  // Increased from 4 to 6
                     _buildPromoTag('Tặng gói Google AI 1 năm'),
+                    SizedBox(height: 4),  // Added spacing between promo tags
                     _buildPromoTag('Trả góp 0% qua thẻ'),
                     Spacer(),
                     Row(
@@ -920,7 +982,8 @@ class ProductCard extends StatelessWidget {
                         Row(children: [
                           Icon(Icons.star, color: Colors.amber, size: 16),
                           SizedBox(width: 4),
-                          Text(rating.toString(), style: TextStyle(fontSize: 12))
+                          Text(rating.toString(),
+                              style: TextStyle(fontSize: 12, height: 1.2))  // Added line height
                         ]),
                         IconButton(
                             icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border,
@@ -933,12 +996,58 @@ class ProductCard extends StatelessWidget {
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
+            ),  // <-- This closes the Expanded widget
+          ],  // <-- This closes the Column children from the parent
+        ),  // <-- This closes the Column
+      ),  // <-- This closes the Container
+    );  // <-- This closes the GestureDetector and returns
   }
 }
+class FadeScaleRoute extends PageRouteBuilder { // class for Fade Scaling Effect
+  final Widget page;
 
+  FadeScaleRoute({required this.page})
+      : super(
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionDuration: const Duration(milliseconds: 500),
+    reverseTransitionDuration: const Duration(milliseconds: 500),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      const curve = Curves.fastOutSlowIn;
 
+      var fadeAnimation = animation.drive(Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: curve)));
+      var scaleAnimation = animation.drive(Tween(begin: 0.9, end: 1.0).chain(CurveTween(curve: curve)));
+
+      return FadeTransition(
+        opacity: fadeAnimation,
+        child: ScaleTransition(
+          scale: scaleAnimation,
+          child: child,
+        ),
+      );
+    },
+  );
+}
+
+class SlideFromRightRoute extends PageRouteBuilder {
+  final Widget page;
+  SlideFromRightRoute({required this.page})
+      : super(
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionDuration: const Duration(milliseconds: 250),
+    reverseTransitionDuration: const Duration(milliseconds: 250),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      const begin = Offset(1.0, 0.0);
+      const end = Offset.zero;
+
+      const curve = Curves.easeOutQuad;
+
+      var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+      var offsetAnimation = animation.drive(tween);
+
+      return SlideTransition(
+        position: offsetAnimation,
+        child: child,
+      );
+    },
+  );
+}

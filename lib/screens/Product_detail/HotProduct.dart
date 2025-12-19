@@ -6,7 +6,10 @@ import '../../services/customer_service.dart';
 import '../../models/customer_model.dart';
 
 class HotProductPage extends StatefulWidget {
-  const HotProductPage({Key? key}) : super(key: key);
+
+  final String? initialCategory;
+
+  const HotProductPage({Key? key, this.initialCategory}) : super(key: key);
 
   @override
   State<HotProductPage> createState() => _HotProductPageState();

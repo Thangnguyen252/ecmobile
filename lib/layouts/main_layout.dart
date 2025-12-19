@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:ecmobile/models/cart_item_model.dart';
+import 'package:ecmobile/screens/Category/category_page.dart';
 import 'package:ecmobile/screens/Homepage/order_history_page.dart';
 import 'package:ecmobile/screens/Search/product_search_screen.dart';
 import 'package:ecmobile/services/cart_service.dart';
@@ -30,8 +31,8 @@ class _MainLayoutState extends State<MainLayout> {
 
   static final List<Widget> _widgetOptions = <Widget>[
     const HomePage(),
-    const Center(child: Text('Trang Danh mục')),
-    const OrderHistoryPage(), // Changed this from placeholder
+    const CategoryPage(),
+    const OrderHistoryPage(),
     const AiSupportPage(),
     const AccountPage(),
   ];
