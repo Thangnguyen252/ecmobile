@@ -20,9 +20,12 @@ class _HotProductPageState extends State<HotProductPage> with SingleTickerProvid
   final Color primaryColor = const Color(0xFFFA661B);
 
   late AnimationController _animationController;
-  String _selectedSort = 'rating'; // 'rating', 'price_low', 'price_high', 'newest'
+  String _selectedSort = 'rating';
+
+  // Mặc định là 'all'
   String _selectedCategory = 'all';
 
+  // Danh sách danh mục để đối chiếu
   final List<Map<String, String>> _categories = [
     {'id': 'all', 'name': 'Tất cả'},
     {'id': 'cate_phone', 'name': 'Điện thoại'},
@@ -30,15 +33,35 @@ class _HotProductPageState extends State<HotProductPage> with SingleTickerProvid
     {'id': 'cate_audio', 'name': 'Âm thanh'},
     {'id': 'cate_monitor', 'name': 'Màn hình'},
     {'id': 'cate_tablet', 'name': 'Tablet'},
+    {'id': 'cate_pc', 'name': 'PC'},
+    {'id': 'cate_ram', 'name': 'Linh kiện'},
   ];
+
 
   @override
   void initState() {
     super.initState();
+
+
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
+
+
+    if (widget.initialCategory != null) {
+      try {
+
+        final foundCategory = _categories.firstWhere(
+              (element) => element['name'] == widget.initialCategory,
+        );
+
+        _selectedCategory = foundCategory['id']!;
+      } catch (e) {
+
+        print("Không tìm thấy category khớp với: ${widget.initialCategory}");
+      }
+    }
   }
 
   @override

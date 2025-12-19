@@ -802,22 +802,39 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+// File: home_page.dart
+
   Widget _buildFilterChips() {
-    final filters = ['Điện thoại', 'Laptop', 'PC', 'Linh kiện'];
+    // Danh sách này PHẢI GIỐNG HỆT tên (name) bên HotProductPage
+    final filters = ['Điện thoại', 'Laptop', 'Màn Hình', 'Âm thanh'];
+
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
-        children: filters
-            .map((filter) => Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: ActionChip(label: Text(filter), onPressed: () {}, backgroundColor: Colors.grey.shade200),
-                ))
-            .toList(),
+        children: filters.map((filterName) => Padding( // Đổi tên biến thành filterName cho dễ hiểu
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: ActionChip(
+            label: Text(filterName),
+            backgroundColor: Colors.grey.shade200,
+            onPressed: () {
+              // --- GỬI DỮ LIỆU ĐI ---
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  // Truyền đúng cái tên (VD: "Điện thoại") sang bên kia
+                  builder: (context) => HotProductPage(
+                    initialCategory: filterName,
+                  ),
+                ),
+              );
+              // ---------------------
+            },
+          ),
+        )).toList(),
       ),
     );
   }
-
   Widget _buildAdBanner(String imageUrl) {
     return Container(
       margin: const EdgeInsets.all(16.0),
