@@ -125,29 +125,65 @@ class _ProductListPageState extends State<ProductListPage> {
     return AppBar(
       backgroundColor: primaryColor,
       elevation: 0,
+      titleSpacing: 0, // Giảm khoảng cách giữa nút Back và ô Search
       leading: IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () => Navigator.pop(context),
       ),
       title: Container(
         height: 40,
+        margin: const EdgeInsets.only(right: 16), // Cách lề phải
         decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8)
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8), // Bo góc nhẹ giống hình bạn gửi
         ),
         child: TextField(
+          controller: _searchController,
+          // --- FIX LỖI LỆCH DƯỚI ---
+          textAlignVertical: TextAlignVertical.center,
+
+          // --- FIX LỖI KHÔNG IN ĐẬM & MÀU XÁM ---
+          style: const TextStyle(
+            color: Colors.black87, // Màu chữ khi gõ
+            fontSize: 14,
+            fontWeight: FontWeight.w500, // Đậm vừa phải (Medium)
+          ),
+
+          onChanged: (value) {
+            setState(() {
+              _searchQuery = value;
+            });
+          },
           decoration: InputDecoration(
             hintText: 'Tìm kiếm trong ${widget.categoryTitle}...',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 16),
+            hintStyle: TextStyle(
+                color: Colors.grey.shade500, // Màu xám placeholder
+                fontSize: 14,
+                fontWeight: FontWeight.normal
+            ),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-            prefixIcon: Icon(Icons.search, color: Colors.grey.shade600, size: 26),
+            isDense: true, // Giúp TextField gọn hơn
+
+            // Quan trọng: Bỏ padding vertical, chỉ giữ horizontal
+            contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+
+            prefixIcon: Icon(Icons.search, color: Colors.grey.shade600, size: 22), // Icon xám
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+              icon: const Icon(Icons.close, size: 18, color: Colors.grey),
+              onPressed: () {
+                _searchController.clear();
+                setState(() {
+                  _searchQuery = '';
+                });
+              },
+            )
+                : null,
           ),
         ),
       ),
     );
   }
-
   Widget _buildPromotionalBanner() {
     if (bannerImages.isEmpty) return const SizedBox.shrink();
     return Column(
@@ -243,22 +279,30 @@ class _ProductListPageState extends State<ProductListPage> {
 
   Widget _buildSortAndFilterBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      // GIẢM padding: 16 -> 12
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
       child: Row(
         children: [
           Expanded(child: _buildSortItem('Giá thấp đến cao', 'priceAsc')),
+
+          // GIẢM margin: 12 -> 8
           Container(
-              height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
+              height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 8)),
+
           Expanded(child: _buildSortItem('Giá cao đến thấp', 'priceDesc')),
+
+          // GIẢM margin: 12 -> 8
           Container(
-              height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
+              height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 8)),
+
           InkWell(
             onTap: () => _showFilterDialog(),
             child: Row(children: [
-              Text('Bộ lọc', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+              // GIẢM font size: 14 -> 13
+              Text('Bộ lọc', style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
               const SizedBox(width: 4),
-              Icon(Icons.filter_list, color: Colors.grey.shade600, size: 18)
+              Icon(Icons.filter_list, color: Colors.grey.shade600, size: 16)
             ]),
           ),
         ],
@@ -275,19 +319,22 @@ class _ProductListPageState extends State<ProductListPage> {
           _updateProductStream();
         });
       },
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(label,
-              style: TextStyle(
-                  color: isActive ? primaryColor : Colors.grey.shade600,
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 14)),
-        ],
+      // THAY ĐỔI QUAN TRỌNG: Dùng Center + Text settings
+      child: Center(
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+              color: isActive ? primaryColor : Colors.grey.shade600,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              fontSize: 13
+          ),
+        ),
       ),
     );
   }
-
   Widget _buildProductGrid(CustomerModel? user) {
     return StreamBuilder<QuerySnapshot>(
       stream: _productStream,
@@ -295,8 +342,10 @@ class _ProductListPageState extends State<ProductListPage> {
         if (snapshot.hasError) return Center(child: Text('Lỗi: ${snapshot.error}'));
         if (snapshot.connectionState == ConnectionState.waiting)
           return Center(child: CircularProgressIndicator(color: primaryColor));
+
         var products = snapshot.data!.docs;
 
+        // Lọc tìm kiếm local
         if (_searchQuery.isNotEmpty) {
           products = products.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
@@ -305,46 +354,140 @@ class _ProductListPageState extends State<ProductListPage> {
           }).toList();
         }
 
-        if (products.isEmpty)
+        if (products.isEmpty) {
           return Center(
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(Icons.search_off, size: 60, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            const Text('Không tìm thấy sản phẩm nào', style: TextStyle(color: Colors.grey))
-          ]));
+                Icon(Icons.search_off, size: 60, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                const Text('Không tìm thấy sản phẩm nào', style: TextStyle(color: Colors.grey))
+              ]));
+        }
 
-        return GridView.builder(
-          padding: const EdgeInsets.all(12),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, crossAxisSpacing: 12, mainAxisSpacing: 12, childAspectRatio: 0.58),
-          itemCount: products.length,
-          itemBuilder: (context, index) {
-            final doc = products[index];
-            final data = {...doc.data() as Map<String, dynamic>, 'id': doc.id};
-            final isFavorite = user?.favoriteProducts.contains(data['id']) ?? false;
-            return _buildProductCard(data, isFavorite, () {
-              if (user != null) {
-                _customerService.toggleFavoriteProduct(data['id']);
-              }
-            });
+        // --- BẮT ĐẦU PHẦN RESPONSIVE ---
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            double screenWidth = constraints.maxWidth;
+
+            // 1. Xác định số cột dựa trên chiều rộng màn hình
+            int crossAxisCount = 2; // Mặc định cho điện thoại
+            if (screenWidth > 600) crossAxisCount = 3; // Tablet nhỏ
+            if (screenWidth > 900) crossAxisCount = 4; // Tablet to / Desktop
+
+            // 2. Cấu hình khoảng cách
+            double padding = 12.0;
+            double spacing = 12.0;
+
+            // 3. Tính chiều rộng thực tế của 1 thẻ sản phẩm
+            // Tổng chiều rộng - (Padding trái phải) - (Khoảng cách giữa các thẻ)
+            double totalHorizontalPadding = (padding * 2) + (spacing * (crossAxisCount - 1));
+            double itemWidth = (screenWidth - totalHorizontalPadding) / crossAxisCount;
+
+            // 4. Đặt chiều cao mong muốn cố định (Đủ để chứa hết nội dung bao gồm cả Hộp Quà)
+            double desiredItemHeight = 350.0;
+
+            // 5. Tính tỷ lệ khung hình (Aspect Ratio)
+            double childAspectRatio = itemWidth / desiredItemHeight;
+
+            return GridView.builder(
+              padding: EdgeInsets.all(padding),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: spacing,
+                  mainAxisSpacing: spacing,
+                  childAspectRatio: childAspectRatio // <--- Sử dụng tỷ lệ động đã tính
+              ),
+              itemCount: products.length,
+              itemBuilder: (context, index) {
+                final doc = products[index];
+                final data = {...doc.data() as Map<String, dynamic>, 'id': doc.id};
+                final isFavorite = user?.favoriteProducts.contains(data['id']) ?? false;
+
+                return _buildProductCard(data, isFavorite, () {
+                  if (user != null) {
+                    _customerService.toggleFavoriteProduct(data['id']);
+                  }
+                });
+              },
+            );
           },
         );
       },
     );
   }
 
+// Widget Tag nhỏ (Freeship, Trả góp)
+  Widget _buildMiniTag(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(3),
+        border: Border.all(color: color.withOpacity(0.3), width: 0.5),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  // Widget Hộp Quà / Khuyến mãi
+  Widget _buildPromoBox(num price) {
+    // Logic giả lập: Giá > 20tr thì tặng quà, ngược lại thì giảm giá mua kèm
+    bool hasGift = price > 20000000;
+
+    if (hasGift) {
+      return Container(
+        margin: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.card_giftcard, size: 12, color: primaryColor),
+            const SizedBox(width: 4),
+            const Expanded(
+              child: Text("Tặng Chuột + Balo", style: TextStyle(fontSize: 10, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
+            )
+          ],
+        ),
+      );
+    } else {
+      return Container(
+        margin: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.local_offer, size: 12, color: Colors.red.shade700),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text("Giảm 10% mua kèm", style: TextStyle(fontSize: 10, color: Colors.red.shade700, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  // --- HÀM CHÍNH XÂY DỰNG CARD ---
   Widget _buildProductCard(Map<String, dynamic> data, bool isFavorite, VoidCallback onToggleFavorite) {
     String name = data['name'] ?? 'Sản phẩm';
     num basePrice = data['basePrice'] ?? 0;
-    num originalPrice = data['originalPrice'] ?? (basePrice * 1.1);
+    num originalPrice = data['originalPrice'] ?? (basePrice * 1.15);
     String imageUrl = (data['images'] != null && (data['images'] as List).isNotEmpty)
         ? (data['images'] as List)[0]
         : 'https://via.placeholder.com/150';
-    String specs = data['description'] ?? '';
     double rating = (data['ratingAverage'] is num) ? (data['ratingAverage'] as num).toDouble() : 4.5;
-    int discountPercent =
-        originalPrice > basePrice ? (((originalPrice - basePrice) / originalPrice) * 100).round() : 0;
+    int discountPercent = originalPrice > basePrice ? (((originalPrice - basePrice) / originalPrice) * 100).round() : 0;
     String productId = data['id'];
+    int soldCount = (basePrice % 50).toInt() + 10; // Giả lập số lượng đã bán
 
     return GestureDetector(
       onTap: () {
@@ -359,62 +502,111 @@ class _ProductListPageState extends State<ProductListPage> {
         decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 4, offset: const Offset(0, 2))]),
+            border: Border.all(color: Colors.grey.shade100), // Viền nhẹ
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.04), spreadRadius: 1, blurRadius: 6, offset: const Offset(0, 2))
+            ]),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- ẢNH & BADGES ---
             Stack(
               children: [
                 ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                    child: Image.network(imageUrl,
-                        height: 150,
-                        width: double.infinity,
-                        fit: BoxFit.contain,
-                        errorBuilder: (_, __, ___) => Container(height: 150, color: Colors.grey.shade100))),
+                    child: Container(
+                      height: 150,
+                      width: double.infinity,
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(8), // Padding nhẹ cho ảnh không bị sát lề
+                      child: Image.network(imageUrl,
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade100)),
+                    )),
+
+                // Badge Giảm giá
                 if (discountPercent > 0)
                   Positioned(
-                      top: 8,
-                      left: 8,
+                      top: 0,
+                      left: 0,
                       child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                          decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
+                          decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: const BorderRadius.only(topLeft: Radius.circular(12), bottomRight: Radius.circular(8))
+                          ),
                           child: Text('-$discountPercent%',
                               style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)))),
+
+                // Nút Yêu thích (Góc phải trên)
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: InkWell(
+                    onTap: onToggleFavorite,
+                    child: Container(
+                      padding: const EdgeInsets.all(5),
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withOpacity(0.8), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 2)]),
+                      child: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? Colors.red : Colors.grey.shade400, size: 18),
+                    ),
+                  ),
+                ),
               ],
             ),
+
+            // --- THÔNG TIN ---
             Expanded(
                 child: Padding(
-                    padding: const EdgeInsets.all(10),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), maxLines: 2, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 4),
-                      Text(specs, style: TextStyle(fontSize: 11, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      const Spacer(),
-                      Text(_formatCurrency(basePrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15)),
-                      if (discountPercent > 0)
-                        Text(_formatCurrency(originalPrice),
-                            style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 11)),
-                      const SizedBox(height: 6),
-                      Row(children: [
-                        Icon(Icons.star, color: Colors.amber, size: 14),
-                        const SizedBox(width: 4),
-                        Text("$rating", style: const TextStyle(fontSize: 11)),
-                        const Spacer(),
-                        IconButton(
-                          icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border, color: isFavorite ? Colors.red : Colors.grey, size: 18),
-                          onPressed: onToggleFavorite,
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
-                        )
-                      ])
-                    ]))),
+                    padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Tên sản phẩm
+                          Text(name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, height: 1.2), maxLines: 2, overflow: TextOverflow.ellipsis),
+
+                          // Giá tiền
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              FittedBox(
+                                child: Text(_formatCurrency(basePrice), style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16)),
+                              ),
+                              if (discountPercent > 0)
+                                Text(_formatCurrency(originalPrice),
+                                    style: const TextStyle(color: Colors.grey, decoration: TextDecoration.lineThrough, fontSize: 11)),
+                            ],
+                          ),
+
+                          // Tags nhỏ (Freeship/Trả góp)
+                          Wrap(
+                            spacing: 4,
+                            children: [
+                              _buildMiniTag('Trả góp 0%', Colors.blue),
+                              _buildMiniTag('Freeship', Colors.green),
+                            ],
+                          ),
+
+                          // Hộp quà tặng / Khuyến mãi
+                          _buildPromoBox(basePrice),
+
+                          // Đánh giá sao & Đã bán
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Row(children: [
+                              Icon(Icons.star, color: Colors.amber, size: 12),
+                              const SizedBox(width: 2),
+                              Text("$rating", style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                              const Spacer(),
+                              Text("Đã bán $soldCount", style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+                            ]),
+                          )
+                        ]))),
           ],
         ),
       ),
     );
   }
-
   void _showSortOptions() {
     showModalBottomSheet(
       context: context,

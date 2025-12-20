@@ -88,7 +88,7 @@ class _HomePageState extends State<HomePage> {
     {'icon': Icons.camera_alt, 'title': 'Camera'},
     {'icon': Icons.watch, 'title': 'Đồng hồ'},
     {'icon': Icons.speaker, 'title': 'Loa'},
-    {'icon': Icons.battery_charging_full, 'title': 'Sạc dự phòng'},
+    {'icon': Icons.battery_charging_full, 'title': 'Power Bank'},
     {'icon': Icons.usb, 'title': 'USB'},
     {'icon': Icons.cable, 'title': 'Cáp sạc'},
   ];
@@ -107,9 +107,10 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     double itemWidth = (screenWidth - 32.0 - 16.0) / 2;
-    double childAspectRatio = 0.48;
+    double desiredItemHeight = 340.0;
+    double childAspectRatio = itemWidth / desiredItemHeight;
     double itemHeight = itemWidth / childAspectRatio;
-    double sliderHeight = (itemHeight * 2) + 16.0 + 40.0;
+    double sliderHeight = (desiredItemHeight * 2) + 16.0 + 40.0;
 
     return StreamBuilder<CustomerModel?>(
         stream: _customerService.getUserStream(),
@@ -682,7 +683,7 @@ class _HomePageState extends State<HomePage> {
         CarouselSlider(
           options: CarouselOptions(
             initialPage: _currentCategoryIndex,
-            height: 240.0,
+            height: 220.0,
             viewportFraction: 1.0,
             enableInfiniteScroll: false,
             autoPlay: false,
@@ -694,9 +695,9 @@ class _HomePageState extends State<HomePage> {
               physics: NeverScrollableScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 5,
-                crossAxisSpacing: 16.0,
-                mainAxisSpacing: 16.0,
-                childAspectRatio: 0.7,
+                crossAxisSpacing: 8.0,
+                mainAxisSpacing: 12.0,
+                childAspectRatio: 0.75,
               ),
               itemCount: pageData.length,
               itemBuilder: (context, index) {
@@ -806,7 +807,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildFilterChips() {
     // Danh sách này PHẢI GIỐNG HỆT tên (name) bên HotProductPage
-    final filters = ['Điện thoại', 'Laptop', 'Màn Hình', 'Âm thanh'];
+    final filters = ['Điện thoại', 'Laptop', 'Màn hình', 'Âm thanh'];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -859,13 +860,18 @@ class ProductCard extends StatelessWidget {
     return format.format(price);
   }
 
-  Widget _buildPromoTag(String text) {
+  // Helper to build tags with custom colors
+  Widget _buildPromoTag(String text, Color bg, Color txt) {
     return Container(
       margin: const EdgeInsets.only(top: 4.0),
       padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 3.0),
-      decoration: BoxDecoration(color: Colors.orange.shade200, borderRadius: BorderRadius.circular(4.0)),
-      child: Text(text,
-          style: TextStyle(fontSize: 10, color: Colors.grey.shade700), maxLines: 1, overflow: TextOverflow.ellipsis),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4.0)),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 10, color: txt, fontWeight: FontWeight.w500),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
   }
 
@@ -884,7 +890,6 @@ class ProductCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        // --- SỬA ĐỔI: Dùng SlideFromRightRoute thay cho MaterialPageRoute ---
         Navigator.push(
           context,
           SlideFromRightRoute(page: ProductDetailScreen(productId: productId)),
@@ -900,14 +905,14 @@ class ProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- PHẦN ĐÃ CHỈNH SỬA: STACK ---
+            // --- IMAGE HEADER (Stack) ---
             Stack(
-              clipBehavior: Clip.none, // 1. Cho phép nón lòi ra ngoài viền
+              clipBehavior: Clip.none,
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
                   child: Image.network(imageUrl,
-                      height: 150,
+                      height: 150, // Fixed height for image area
                       width: double.infinity,
                       fit: BoxFit.contain,
                       errorBuilder: (ctx, err, stack) => Container(
@@ -931,15 +936,13 @@ class ProductCard extends StatelessWidget {
                         BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(4)),
                         child: Text('Giảm 10%',
                             style: TextStyle(color: primaryColor, fontSize: 10, fontWeight: FontWeight.bold)))),
-
-                // 2. Thêm nón vào góc trái (nằm cuối list children để đè lên trên cùng)
                 Positioned(
                   top: -12,
                   left: -12,
                   child: Transform.rotate(
-                    angle: -0.5, // Chỉnh lại góc xoay nhẹ để khớp với việc đã lật ảnh
+                    angle: -0.5,
                     child: Transform.scale(
-                      scaleX: -1, // <--- Dòng này giúp lật ngang hình ảnh (Mirror)
+                      scaleX: -1,
                       child: Image.network(
                         'https://cdn-icons-png.flaticon.com/512/744/744546.png',
                         width: 28,
@@ -950,84 +953,109 @@ class ProductCard extends StatelessWidget {
                 ),
               ],
             ),
-            // --- HẾT PHẦN CHỈNH SỬA ---
 
+            // --- INFO BODY ---
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(10.0), // Slightly reduced padding to save space
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Distribute content evenly
                   children: [
-                    Text(name,  // Removed Flexible wrapper
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: primaryColor,
-                            height: 1.3),  // Added line height
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                    SizedBox(height: 6),  // Increased from 5 to 6
-                    Text(specs,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                            height: 1.2),  // Added line height
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
-                    SizedBox(height: 4),  // Increased from 2 to 4
-                    Text(formatCurrency(rawPrice),
-                        style: TextStyle(
-                            color: primaryColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            height: 1.2)),  // Added line height
-                    SizedBox(height: 2),  // Added spacing between prices
-                    Text(formatCurrency(oldPrice),
-                        style: TextStyle(
-                            color: Colors.grey.shade500,
-                            decoration: TextDecoration.lineThrough,
-                            fontSize: 12,
-                            height: 1.2)),  // Added line height
-                    SizedBox(height: 6),  // Increased from 4 to 6
-                    _buildPromoTag('Tặng gói Google AI 1 năm'),
-                    SizedBox(height: 4),  // Added spacing between promo tags
-                    _buildPromoTag('Trả góp 0% qua thẻ'),
-                    Spacer(),
+                    // 1. Name and Specs
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(name,
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: primaryColor,
+                                height: 1.2),
+                            maxLines: 2, // Allow 2 lines for name
+                            overflow: TextOverflow.ellipsis),
+                        SizedBox(height: 4),
+                        Text(specs,
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                                height: 1.1),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+
+                    // 2. Price Section
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // FittedBox prevents overflow if price is huge
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(formatCurrency(rawPrice),
+                              style: TextStyle(
+                                  color: primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16)),
+                        ),
+                        Text(formatCurrency(oldPrice),
+                            style: TextStyle(
+                                color: Colors.grey.shade500,
+                                decoration: TextDecoration.lineThrough,
+                                fontSize: 11)),
+                      ],
+                    ),
+
+                    // 3. Promo Tags (Now using the helper method)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildPromoTag('Tặng gói Google AI 1 năm', Colors.orange.shade100, Colors.grey.shade800),
+                        _buildPromoTag('Trả góp 0% qua thẻ', Colors.blue.shade50, Colors.blue.shade800),
+                      ],
+                    ),
+
+                    // 4. Footer (Rating & Heart)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(children: [
-                          Icon(Icons.star, color: Colors.amber, size: 16),
+                          Icon(Icons.star, color: Colors.amber, size: 14),
                           SizedBox(width: 4),
                           Text(rating.toString(),
-                              style: TextStyle(fontSize: 12, height: 1.2))  // Added line height
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600))
                         ]),
-                        IconButton(
-                            icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border,
+                        InkWell(
+                          onTap: onToggleFavorite,
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0), // Hit area for button
+                            child: Icon(isFavorite ? Icons.favorite : Icons.favorite_border,
                                 color: isFavorite ? Colors.red : Colors.grey, size: 20),
-                            onPressed: onToggleFavorite,
-                            padding: EdgeInsets.zero,
-                            constraints: BoxConstraints()),
+                          ),
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-            ),  // <-- This closes the Expanded widget
-          ],  // <-- This closes the Column children from the parent
-        ),  // <-- This closes the Column
-      ),  // <-- This closes the Container
-    );  // <-- This closes the GestureDetector and returns
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
-class FadeScaleRoute extends PageRouteBuilder { // class for Fade Scaling Effect
+
+// --- Dán đoạn này vào cuối cùng file home_page.dart ---
+
+class FadeScaleRoute extends PageRouteBuilder {
   final Widget page;
 
   FadeScaleRoute({required this.page})
       : super(
     pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionDuration: const Duration(milliseconds: 500),
-    reverseTransitionDuration: const Duration(milliseconds: 500),
+    transitionDuration: const Duration(milliseconds: 350),
+    reverseTransitionDuration: const Duration(milliseconds: 350),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       const curve = Curves.fastOutSlowIn;
 
@@ -1047,15 +1075,15 @@ class FadeScaleRoute extends PageRouteBuilder { // class for Fade Scaling Effect
 
 class SlideFromRightRoute extends PageRouteBuilder {
   final Widget page;
+
   SlideFromRightRoute({required this.page})
       : super(
     pageBuilder: (context, animation, secondaryAnimation) => page,
-    transitionDuration: const Duration(milliseconds: 250),
-    reverseTransitionDuration: const Duration(milliseconds: 250),
+    transitionDuration: const Duration(milliseconds: 300),
+    reverseTransitionDuration: const Duration(milliseconds: 300),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       const begin = Offset(1.0, 0.0);
       const end = Offset.zero;
-
       const curve = Curves.easeOutQuad;
 
       var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
