@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:ecmobile/screens/Product_detail/product_detail.dart'; // Đảm bảo import đúng đường dẫn file chi tiết sản phẩm của bạn
 
 class FlashSalePage extends StatefulWidget {
   const FlashSalePage({Key? key}) : super(key: key);
@@ -11,46 +12,91 @@ class FlashSalePage extends StatefulWidget {
 }
 
 class _FlashSalePageState extends State<FlashSalePage> {
-  late DateTime endTime;
-  late Timer _timer;
-  Duration _timeLeft = Duration();
+  Timer? _timer;
+  Duration _timeLeft = Duration.zero;
+  String _statusMessage = ""; // "KẾT THÚC TRONG" hoặc "BẮT ĐẦU TRONG"
+  bool _isFlashSaleActive = false; // Biến kiểm tra xem có đang trong giờ sale không
 
-  // Cho phép null (?) để tránh lỗi LateInitializationError khi Hot Reload
+  // Các khung giờ bắt đầu Flash Sale (8h, 13h, 19h)
+  // Mỗi khung giờ kéo dài 2 tiếng
+  final List<int> startHours = [8, 13, 19];
+  final int durationHours = 2;
+
   Stream<QuerySnapshot>? _productsStream;
 
   @override
   void initState() {
     super.initState();
-
-    // Khởi tạo Stream
     _productsStream = FirebaseFirestore.instance.collection('products').limit(20).snapshots();
-
-    // Cài đặt thời gian đếm ngược (2 tiếng)
-    endTime = DateTime.now().add(const Duration(hours: 2));
+    _calculateTimeLeft(); // Tính toán ngay khi vào
     _startTimer();
+  }
+
+  // Hàm tính toán logic thời gian quan trọng nhất
+  void _calculateTimeLeft() {
+    DateTime now = DateTime.now();
+    DateTime? targetTime;
+    bool isActive = false;
+    String message = "";
+
+    // Tìm phiên sale phù hợp
+    for (int startHour in startHours) {
+      DateTime startTime = DateTime(now.year, now.month, now.day, startHour, 0, 0);
+      DateTime endTime = startTime.add(Duration(hours: durationHours));
+
+      if (now.isAfter(startTime) && now.isBefore(endTime)) {
+        // TRƯỜNG HỢP 1: Đang trong khung giờ Sale
+        // Ví dụ: Bây giờ là 09:30, Sale từ 08:00 - 10:00
+        targetTime = endTime;
+        isActive = true;
+        message = "KẾT THÚC TRONG";
+        break; // Tìm thấy rồi thì dừng lại
+      } else if (now.isBefore(startTime)) {
+        // TRƯỜNG HỢP 2: Chưa đến giờ Sale, chờ đến khung giờ tiếp theo gần nhất
+        // Ví dụ: Bây giờ là 07:00, khung giờ sắp tới là 08:00
+        targetTime = startTime;
+        isActive = false;
+        message = "BẮT ĐẦU TRONG";
+        break;
+      }
+    }
+
+    // TRƯỜNG HỢP 3: Đã qua hết các khung giờ trong ngày (ví dụ 22:00 đêm)
+    // Đếm ngược đến khung giờ đầu tiên của NGÀY MAI (08:00 sáng mai)
+    if (targetTime == null) {
+      DateTime tomorrowStart = DateTime(now.year, now.month, now.day + 1, startHours[0], 0, 0);
+      targetTime = tomorrowStart;
+      isActive = false;
+      message = "BẮT ĐẦU TRONG";
+    }
+
+    // Cập nhật state
+    if (mounted) {
+      setState(() {
+        _timeLeft = targetTime!.difference(now);
+        _statusMessage = message;
+        _isFlashSaleActive = isActive;
+      });
+    }
   }
 
   void _startTimer() {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
-        setState(() {
-          _timeLeft = endTime.difference(DateTime.now());
-          if (_timeLeft.isNegative) {
-            _timer.cancel();
-            _timeLeft = Duration.zero;
-          }
-        });
+        // Mỗi giây tính toán lại một lần để đảm bảo chính xác và tự động chuyển trạng thái
+        _calculateTimeLeft();
       }
     });
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
   String _formatDuration(Duration duration) {
+    if (duration.isNegative) return "00 : 00 : 00";
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     String hours = twoDigits(duration.inHours);
     String minutes = twoDigits(duration.inMinutes.remainder(60));
@@ -76,9 +122,12 @@ class _FlashSalePageState extends State<FlashSalePage> {
           // --- HEADER ĐẾM NGƯỢC ---
           Container(
             padding: const EdgeInsets.all(16.0),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.orange, Colors.deepOrange],
+                // Đổi màu nền nếu chưa đến giờ sale (xám/đen) để người dùng phân biệt
+                colors: _isFlashSaleActive
+                    ? [Colors.orange, Colors.deepOrange]
+                    : [Colors.grey.shade700, Colors.grey.shade900],
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
@@ -86,19 +135,34 @@ class _FlashSalePageState extends State<FlashSalePage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "KẾT THÚC TRONG",
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _statusMessage, // Hiển thị "KẾT THÚC TRONG" hoặc "BẮT ĐẦU TRONG"
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    ),
+                    // Hiển thị khung giờ hiện tại (để user dễ hiểu)
+                    if (_isFlashSaleActive)
+                      Text(
+                        "(Đang diễn ra)",
+                        style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                  ],
                 ),
                 Row(
                   children: [
-                    const Icon(Icons.timer, color: Colors.white),
+                    Icon(
+                      _isFlashSaleActive ? Icons.timer : Icons.lock_clock, // Đổi icon
+                      color: Colors.white,
+                    ),
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.black,
                         borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white24),
                       ),
                       child: Text(
                         _formatDuration(_timeLeft),
@@ -114,7 +178,6 @@ class _FlashSalePageState extends State<FlashSalePage> {
           // --- DANH SÁCH SẢN PHẨM ---
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              // Thêm '?? ...' để nếu _productsStream bị null (do reload) thì tạo mới ngay lập tức
               stream: _productsStream ?? FirebaseFirestore.instance.collection('products').limit(20).snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
@@ -137,11 +200,12 @@ class _FlashSalePageState extends State<FlashSalePage> {
                     final doc = products[index];
                     final data = doc.data() as Map<String, dynamic>;
 
-                    // Trích xuất dữ liệu cơ bản
+                    // Lấy ID sản phẩm để redirect
+                    String productId = doc.id; // Lấy ID document làm productId
+
                     String name = data['name'] ?? 'Sản phẩm';
                     num price = data['basePrice'] ?? 0;
                     num originalPrice = data['originalPrice'] ?? (price * 1.2);
-
                     String imageUrl = 'https://via.placeholder.com/150';
                     if (data['images'] != null && (data['images'] as List).isNotEmpty) {
                       imageUrl = (data['images'] as List)[0];
@@ -152,51 +216,52 @@ class _FlashSalePageState extends State<FlashSalePage> {
                       discountPercent = ((originalPrice - price) / originalPrice * 100).round();
                     }
 
-                    // Logic tính toán thanh tiến trình
                     int sold = data['sold'] ?? 0;
                     int totalStock = data['stock'] ?? 50;
-
-                    // Tính phần trăm để hiển thị thanh màu
                     double progress = 0.0;
                     if (totalStock > 0) {
                       progress = (sold / totalStock).clamp(0.0, 1.0);
                     }
 
-                    // --- [CODE ĐÃ SỬA: THÊM HIỆU ỨNG INKWELL] ---
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       elevation: 2,
-                      // 1. Thêm clipBehavior để cắt hiệu ứng gợn sóng theo hình bo tròn
                       clipBehavior: Clip.antiAlias,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      // 2. Bọc nội dung trong InkWell
                       child: InkWell(
+                        // --- [CODE ĐÃ SỬA: REDIRECT] ---
                         onTap: () {
-                          // TODO: Chuyển sang trang chi tiết sản phẩm
-                          print("Đã bấm vào: $name");
+                          // Nếu chưa đến giờ Sale, có thể hiện thông báo hoặc vẫn cho xem nhưng ko mua được giá sale (tùy logic app)
+                          // Ở đây ta cho chuyển trang bình thường
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProductDetailScreen(productId: productId),
+                            ),
+                          );
                         },
-                        splashColor: Colors.orange.withOpacity(0.2), // Màu gợn sóng cam
+                        splashColor: Colors.orange.withOpacity(0.2),
                         highlightColor: Colors.orange.withOpacity(0.1),
                         child: Padding(
                           padding: const EdgeInsets.all(12.0),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  imageUrl,
-                                  width: 100,
-                                  height: 100,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      width: 100,
-                                      height: 100,
-                                      color: Colors.grey.shade200,
+                              // Nếu chưa đến giờ sale, làm mờ ảnh sản phẩm
+                              Opacity(
+                                opacity: _isFlashSaleActive ? 1.0 : 0.6,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    imageUrl,
+                                    width: 100,
+                                    height: 100,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (ctx, err, stack) => Container(
+                                      width: 100, height: 100, color: Colors.grey.shade200,
                                       child: const Icon(Icons.broken_image, color: Colors.grey),
-                                    );
-                                  },
+                                    ),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -215,7 +280,11 @@ class _FlashSalePageState extends State<FlashSalePage> {
                                       children: [
                                         Text(
                                           formatCurrency(price),
-                                          style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 16),
+                                          style: TextStyle(
+                                            color: _isFlashSaleActive ? Colors.red : Colors.grey,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
                                         ),
                                         const SizedBox(width: 8),
                                         if (discountPercent > 0)
@@ -239,12 +308,11 @@ class _FlashSalePageState extends State<FlashSalePage> {
                                       ),
                                     const SizedBox(height: 12),
 
-                                    // UI thanh trạng thái đã bán
-                                    LayoutBuilder(
+                                    _isFlashSaleActive
+                                        ? LayoutBuilder(
                                         builder: (context, constraints) {
                                           return Stack(
                                             children: [
-                                              // Thanh nền xám (tổng kho)
                                               Container(
                                                 height: 16,
                                                 width: constraints.maxWidth,
@@ -253,7 +321,6 @@ class _FlashSalePageState extends State<FlashSalePage> {
                                                   borderRadius: BorderRadius.circular(8),
                                                 ),
                                               ),
-                                              // Thanh màu gradient (số đã bán)
                                               if (sold > 0)
                                                 Container(
                                                   height: 16,
@@ -263,7 +330,6 @@ class _FlashSalePageState extends State<FlashSalePage> {
                                                     borderRadius: BorderRadius.circular(8),
                                                   ),
                                                 ),
-                                              // Chữ hiển thị
                                               Center(
                                                 child: Text(
                                                   sold > 0 ? "Đã bán $sold" : "Vừa mở bán",
@@ -272,7 +338,14 @@ class _FlashSalePageState extends State<FlashSalePage> {
                                               ),
                                             ],
                                           );
-                                        }
+                                        })
+                                        : Container(
+                                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                      decoration: BoxDecoration(
+                                          border: Border.all(color: Colors.orange),
+                                          borderRadius: BorderRadius.circular(4)
+                                      ),
+                                      child: const Text("Sắp mở bán", style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
                                     ),
                                   ],
                                 ),

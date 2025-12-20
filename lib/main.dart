@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:ecmobile/screens/Login/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -5,9 +6,17 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 import 'package:ecmobile/layouts/main_layout.dart';
+import 'package:flutter_displaymode/flutter_displaymode.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  if (Platform.isAndroid) {
+    try {
+      await FlutterDisplayMode.setHighRefreshRate();
+    } catch (e) {
+      print("Lỗi khi set tần số quét cao: $e");
+    }
+  }
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -18,6 +27,7 @@ void main() async {
 
   runApp(MyApp(isLoggedIn: userEmail != null));
 }
+
 
 class MyApp extends StatelessWidget {
   final bool isLoggedIn;

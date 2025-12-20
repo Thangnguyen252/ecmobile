@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'event_christmas.dart';
+import 'event_black_friday.dart'; // Đảm bảo đã import file này
 
 class EventPage extends StatelessWidget {
   const EventPage({Key? key}) : super(key: key);
@@ -15,7 +17,8 @@ class EventPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade100,
       appBar: AppBar(
-        title: const Text('Sự kiện nổi bật', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+            'Sự kiện nổi bật', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0.5,
@@ -42,7 +45,8 @@ class EventPage extends StatelessWidget {
                 children: [
                   Icon(Icons.event_busy, size: 80, color: Colors.grey.shade300),
                   const SizedBox(height: 16),
-                  const Text("Chưa có sự kiện nào đang diễn ra", style: TextStyle(color: Colors.grey)),
+                  const Text("Chưa có sự kiện nào đang diễn ra",
+                      style: TextStyle(color: Colors.grey)),
                 ],
               ),
             );
@@ -77,7 +81,7 @@ class EventPage extends StatelessWidget {
             color: Colors.grey.withOpacity(0.2),
             spreadRadius: 2,
             blurRadius: 8,
-            offset: const Offset(0, 4), // Đổ bóng xuống dưới
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -85,18 +89,43 @@ class EventPage extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(16.0),
+          // --- PHẦN ĐÃ CẬP NHẬT LOGIC ĐIỀU HƯỚNG ---
           onTap: () {
-            // Xử lý khi bấm vào sự kiện (Ví dụ: Mở trang danh sách sản phẩm giảm giá)
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Đang mở sự kiện: $title')),
-            );
+            String lowerTitle = title.toLowerCase();
+
+            // 1. Kiểm tra Giáng Sinh
+            if (lowerTitle.contains('giáng sinh') ||
+                lowerTitle.contains('noel') ||
+                lowerTitle.contains('christmas')) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const EventChristmasPage()),
+              );
+            }
+            // 2. Kiểm tra Black Friday (MỚI THÊM)
+            else if (lowerTitle.contains('black friday') ||
+                lowerTitle.contains('thứ sáu đen')) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const EventBlackFridayPage()),
+              );
+            }
+            // 3. Các sự kiện khác
+            else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Đang mở sự kiện: $title')),
+              );
+            }
           },
+          // ------------------------------------------
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- 1. BANNER HÌNH ẢNH ---
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16.0)),
+                borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16.0)),
                 child: Stack(
                   children: [
                     Image.network(
@@ -108,48 +137,51 @@ class EventPage extends StatelessWidget {
                         return Container(
                           height: 180,
                           color: Colors.orange.shade100,
-                          child: Center(child: Icon(Icons.image, size: 50, color: Colors.orange.shade300)),
+                          child: Center(child: Icon(Icons.image, size: 50,
+                              color: Colors.orange.shade300)),
                         );
                       },
                     ),
-                    // Badge "Đang diễn ra"
                     Positioned(
                       top: 12,
                       right: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.red,
                           borderRadius: BorderRadius.circular(20),
-                          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                          boxShadow: const [BoxShadow(
+                              color: Colors.black26, blurRadius: 4)
+                          ],
                         ),
                         child: const Text(
                           "ĐANG DIỄN RA",
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+                          style: TextStyle(color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10),
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-
-              // --- 2. NỘI DUNG TEXT ---
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      title.toUpperCase(), // Tên sự kiện (BLACK FRIDAY...)
+                      title.toUpperCase(),
                       style: TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.w900, // In đậm dày
+                        fontWeight: FontWeight.w900,
                         color: Colors.orange.shade800,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      description, // Slogan (Mua hàng thả ga...)
+                      description,
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade700,
@@ -157,34 +189,36 @@ class EventPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
-
-                    // Dòng hiển thị thời gian và nút xem
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         if (endDate != null)
                           Row(
                             children: [
-                              Icon(Icons.access_time, size: 14, color: Colors.grey.shade500),
+                              Icon(Icons.access_time, size: 14,
+                                  color: Colors.grey.shade500),
                               const SizedBox(width: 4),
                               Text(
                                 "Đến ngày: ${formatDate(endDate)}",
-                                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.grey.shade600),
                               ),
                             ],
                           )
                         else
-                          const SizedBox(), // Giữ chỗ nếu không có ngày
-
+                          const SizedBox(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             border: Border.all(color: Colors.orange),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: const Text(
                             "Tham gia ngay >",
-                            style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12),
+                            style: TextStyle(color: Colors.orange,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12),
                           ),
                         )
                       ],

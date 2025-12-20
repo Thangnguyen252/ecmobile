@@ -6,7 +6,6 @@ import '../../services/customer_service.dart';
 import '../../models/customer_model.dart';
 
 class HotProductPage extends StatefulWidget {
-
   final String? initialCategory;
 
   const HotProductPage({Key? key, this.initialCategory}) : super(key: key);
@@ -22,10 +21,10 @@ class _HotProductPageState extends State<HotProductPage> with SingleTickerProvid
   late AnimationController _animationController;
   String _selectedSort = 'rating';
 
-  // Mặc định là 'all'
+  // Default is 'all'
   String _selectedCategory = 'all';
 
-  // Danh sách danh mục để đối chiếu
+  // Category list for mapping
   final List<Map<String, String>> _categories = [
     {'id': 'all', 'name': 'Tất cả'},
     {'id': 'cate_phone', 'name': 'Điện thoại'},
@@ -37,28 +36,24 @@ class _HotProductPageState extends State<HotProductPage> with SingleTickerProvid
     {'id': 'cate_ram', 'name': 'Linh kiện'},
   ];
 
-
   @override
   void initState() {
     super.initState();
 
-
+    // 1. Initialize Animation
     _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
-
+    // 2. Handle initial category from Home Page
     if (widget.initialCategory != null) {
       try {
-
         final foundCategory = _categories.firstWhere(
               (element) => element['name'] == widget.initialCategory,
         );
-
         _selectedCategory = foundCategory['id']!;
       } catch (e) {
-
         print("Không tìm thấy category khớp với: ${widget.initialCategory}");
       }
     }
@@ -78,10 +73,10 @@ class _HotProductPageState extends State<HotProductPage> with SingleTickerProvid
       query = query.where('categoryId', isEqualTo: _selectedCategory);
     }
 
-    // Filter by rating (hot products have rating >= 4.0)
+    // Filter by rating (hot products usually have rating >= 4.0)
     query = query.where('ratingAverage', isGreaterThanOrEqualTo: 4.0);
 
-    // Sort
+    // Sort logic
     switch (_selectedSort) {
       case 'rating':
         query = query.orderBy('ratingAverage', descending: true);
@@ -103,6 +98,26 @@ class _HotProductPageState extends State<HotProductPage> with SingleTickerProvid
 
   @override
   Widget build(BuildContext context) {
+    // --- RESPONSIVE LOGIC START ---
+    double screenWidth = MediaQuery.of(context).size.width;
+
+    // Determine column count: 2 for Phones, 3 for Tablets, 4 for Desktop
+    int crossAxisCount = screenWidth > 900 ? 4 : (screenWidth > 600 ? 3 : 2);
+
+    // Calculate item width based on padding and spacing
+    double padding = 16.0;
+    double spacing = 16.0;
+    double totalHorizontalPadding = (padding * 2) + (spacing * (crossAxisCount - 1));
+    double itemWidth = (screenWidth - totalHorizontalPadding) / crossAxisCount;
+
+    // DESIRED HEIGHT: Fixed height ensures content fits on all screen sizes
+    // 350px is enough for Image + Name + Rating + Prices + Button
+    double desiredItemHeight = 350.0;
+
+    // Dynamic Aspect Ratio
+    double childAspectRatio = itemWidth / desiredItemHeight;
+    // --- RESPONSIVE LOGIC END ---
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -191,10 +206,10 @@ class _HotProductPageState extends State<HotProductPage> with SingleTickerProvid
                     return GridView.builder(
                       padding: const EdgeInsets.all(16.0),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16.0,
-                        mainAxisSpacing: 16.0,
-                        childAspectRatio: 0.48,
+                        crossAxisCount: crossAxisCount, // Dynamic columns
+                        crossAxisSpacing: spacing,
+                        mainAxisSpacing: spacing,
+                        childAspectRatio: childAspectRatio, // Dynamic ratio
                       ),
                       itemCount: products.length,
                       itemBuilder: (context, index) {
@@ -334,10 +349,35 @@ class HotProductCard extends StatelessWidget {
     return Colors.grey.shade300;
   }
 
+  // Helper: Widget tạo các tag nhỏ xinh
+  Widget _buildMiniTag(String text, Color color, {bool isBorder = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: BoxDecoration(
+        color: isBorder ? Colors.transparent : color.withOpacity(0.1),
+        border: isBorder ? Border.all(color: color, width: 0.5) : null,
+        borderRadius: BorderRadius.circular(2),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 8, // Chữ nhỏ tinh tế
+          color: color,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color primaryColor = const Color(0xFFFA661B);
+
+    // Lấy dữ liệu an toàn
     String name = data['name'] ?? 'Sản phẩm';
+    // Giả lập brand nếu data không có trường brand, bạn có thể sửa thành data['brand']
+    String brand = (data['brand'] ?? 'CHÍNH HÃNG').toString().toUpperCase();
+
     num rawPrice = data['basePrice'] ?? 0;
     String imageUrl = (data['images'] != null && (data['images'] as List).isNotEmpty)
         ? (data['images'] as List)[0]
@@ -360,236 +400,180 @@ class HotProductCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(color: primaryColor.withOpacity(0.3), width: 2.0),
+          border: Border.all(color: Colors.grey.shade200, width: 1.0),
           boxShadow: [
             BoxShadow(
-              color: primaryColor.withOpacity(0.1),
-              spreadRadius: 2,
-              blurRadius: 8,
-              offset: Offset(0, 4),
+              color: Colors.black.withOpacity(0.03),
+              spreadRadius: 1,
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- PHẦN 1: HÌNH ẢNH & BADGE ---
             Stack(
               clipBehavior: Clip.none,
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)),
                   child: Image.network(
                     imageUrl,
-                    height: 150,
+                    height: 140,
                     width: double.infinity,
                     fit: BoxFit.contain,
                     errorBuilder: (ctx, err, stack) => Container(
-                      height: 150,
-                      color: Colors.grey.shade200,
-                      child: Icon(Icons.broken_image, color: Colors.grey.shade400),
+                      height: 140,
+                      color: Colors.grey.shade100,
+                      child: Icon(Icons.broken_image, color: Colors.grey.shade300),
                     ),
                   ),
                 ),
-                // HOT badge with flame
+                // Badge HOT gradient
                 Positioned(
                   top: 8,
                   left: 8,
                   child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.red.shade600, Colors.orange.shade500],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.red.withOpacity(0.4),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                      ],
+                      gradient: LinearGradient(colors: [Colors.red.shade600, Colors.orange.shade600]),
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.local_fire_department, color: Colors.white, size: 14),
-                        SizedBox(width: 4),
-                        Text(
-                          'HOT',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: const Text('HOT', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                   ),
                 ),
-                // Discount badge
+                // Badge Giảm giá
                 if (discount > 0)
                   Positioned(
                     top: 8,
                     right: 8,
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        '-$discount%',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.yellow.shade800, borderRadius: BorderRadius.circular(4)),
+                      child: Text('-$discount%', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                     ),
                   ),
-                // Rank badge
+                // Badge Xếp hạng (#1, #2...)
                 Positioned(
-                  bottom: 8,
-                  left: 8,
+                  bottom: 4, left: 8,
                   child: Container(
-                    width: 32,
-                    height: 32,
+                    width: 24, height: 24,
                     decoration: BoxDecoration(
                       color: _getRankColor(rank),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 4,
-                        ),
-                      ],
+                      border: Border.all(color: Colors.white, width: 1.5),
+                      boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4)],
                     ),
                     child: Center(
-                      child: Text(
-                        '#$rank',
-                        style: TextStyle(
-                          color: rank <= 3 ? Colors.white : Colors.black87,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: Text('#$rank', style: TextStyle(color: rank <= 3 ? Colors.white : Colors.black54, fontSize: 10, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ),
-                // Christmas hat
+                // Mũ Noel (Seasonal Decoration)
                 Positioned(
-                  top: -12,
-                  left: -12,
+                  top: -10, left: -8,
                   child: Transform.rotate(
                     angle: -0.5,
-                    child: Transform.scale(
-                      scaleX: -1,
-                      child: Image.network(
-                        'https://cdn-icons-png.flaticon.com/512/744/744546.png',
-                        width: 28,
-                        height: 28,
-                      ),
-                    ),
+                    child: Image.network('https://cdn-icons-png.flaticon.com/512/744/744546.png', width: 22),
                   ),
                 ),
               ],
             ),
+
+            // --- PHẦN 2: NỘI DUNG CHI TIẾT ---
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(8.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Căn đều các phần tử
                   children: [
+                    // A. Thương hiệu (MỚI - Lấp khoảng trống trên cùng)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(2)),
+                      child: Text(
+                        brand,
+                        style: TextStyle(fontSize: 9, color: Colors.grey.shade600, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+
+                    // B. Tên sản phẩm
                     Text(
                       name,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.black87,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87, height: 1.2),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    SizedBox(height: 8),
-                    Row(
+
+                    // C. Giá & Giá cũ
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.star, color: Colors.amber, size: 16),
-                        SizedBox(width: 4),
-                        Text(
-                          rating.toStringAsFixed(1),
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                        FittedBox(
+                          child: Text(
+                            formatCurrency(rawPrice),
+                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 15),
                           ),
                         ),
-                        SizedBox(width: 8),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade100,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'Bán chạy',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.green.shade700,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        Text(
+                          formatCurrency(oldPrice),
+                          style: TextStyle(color: Colors.grey.shade400, decoration: TextDecoration.lineThrough, fontSize: 10),
                         ),
                       ],
                     ),
-                    SizedBox(height: 8),
-                    Text(
-                      formatCurrency(rawPrice),
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      formatCurrency(oldPrice),
-                      style: TextStyle(
-                        color: Colors.grey.shade500,
-                        decoration: TextDecoration.lineThrough,
-                        fontSize: 12,
-                      ),
-                    ),
-                    Spacer(),
+
+                    // D. Đánh giá & Số lượng bán (MỚI - Tăng uy tín)
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Icon(Icons.star, color: Colors.amber, size: 12),
+                        Text('$rating', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 4),
+                        // Fake số liệu đánh giá để demo
+                        Text('(${rank * 15 + 10} đánh giá)', style: const TextStyle(fontSize: 9, color: Colors.grey)),
+                      ],
+                    ),
+
+                    // E. Các Tag ưu đãi (MỚI - Lấp khoảng trống quan trọng nhất)
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 2,
+                      children: [
+                        _buildMiniTag('Freeship', Colors.green),
+                        _buildMiniTag('Trả góp 0%', Colors.blue),
+                        _buildMiniTag('Chính hãng', primaryColor, isBorder: true),
+                      ],
+                    ),
+
+                    const SizedBox(height: 4),
+
+                    // F. Nút Mua & Yêu thích (Giao diện mới)
+                    Row(
                       children: [
                         Expanded(
                           child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 4),
+                            height: 28,
                             decoration: BoxDecoration(
-                              color: primaryColor.withOpacity(0.1),
+                              color: primaryColor,
                               borderRadius: BorderRadius.circular(4),
                             ),
-                            child: Text(
-                              'Xem chi tiết',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: primaryColor,
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              'Mua ngay',
+                              style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ),
-                        SizedBox(width: 8),
-                        IconButton(
-                          icon: Icon(
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: onToggleFavorite,
+                          child: Icon(
                             isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color: isFavorite ? Colors.red : Colors.grey,
-                            size: 20,
+                            color: isFavorite ? Colors.red : Colors.grey.shade400,
+                            size: 22,
                           ),
-                          onPressed: onToggleFavorite,
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(),
                         ),
                       ],
                     ),

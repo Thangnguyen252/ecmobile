@@ -1,4 +1,3 @@
-
 import 'package:ecmobile/models/customer_model.dart';
 import 'package:ecmobile/services/customer_service.dart';
 import 'package:ecmobile/widgets/reusable_search_bar.dart';
@@ -6,8 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ecmobile/theme/app_colors.dart';
 
-// Model và ProductCard giữ nguyên như cũ...
+// --- QUAN TRỌNG: Thêm dòng này để hiểu trang chi tiết sản phẩm ---
+import 'package:ecmobile/screens/Product_detail/product_detail.dart';
 
+// --- GIỮ NGUYÊN MODEL PRODUCT ---
 class Product {
   final String id;
   final String name;
@@ -16,6 +17,7 @@ class Product {
   final num? originalPrice;
   final List<String> images;
   final double ratingAverage;
+  final String? brand;
 
   Product({
     required this.id,
@@ -25,6 +27,7 @@ class Product {
     this.originalPrice,
     required this.images,
     required this.ratingAverage,
+    this.brand,
   });
 
   factory Product.fromMap(Map<String, dynamic> data) {
@@ -36,6 +39,7 @@ class Product {
       originalPrice: data['originalPrice'],
       images: List<String>.from(data['images'] ?? []),
       ratingAverage: (data['ratingAverage'] as num? ?? 4.5).toDouble(),
+      brand: data['brand'],
     );
   }
 }
@@ -88,7 +92,7 @@ class _SearchResultPageState extends State<SearchResultPage> {
   void _runFilter(String keyword) {
     List<Product> results;
     if (keyword.isEmpty) {
-      results = widget.allProducts; // Nếu xóa hết chữ, tìm trên toàn bộ
+      results = widget.allProducts;
     } else {
       String lowerCaseKeyword = keyword.toLowerCase();
       results = widget.allProducts.where((product) {
@@ -117,12 +121,14 @@ class _SearchResultPageState extends State<SearchResultPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         backgroundColor: AppColors.primary,
+        elevation: 0,
         title: ReusableSearchBar(
           controller: _searchController,
-          autofocus: true,
-          hintText: "Tìm kiếm sản phẩm...",
+          autofocus: false,
+          hintText: "Tìm kiếm thêm...",
           onChanged: _runFilter,
         ),
       ),
@@ -145,21 +151,28 @@ class _SearchResultPageState extends State<SearchResultPage> {
   Widget _buildSortAndFilterBar() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Colors.grey.shade200))),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, 2),
+            blurRadius: 4,
+          )
+        ],
+      ),
       child: Row(
         children: [
           Expanded(child: _buildSortItem('Phổ biến', 'popular')),
-          Container(
-              height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
+          Container(height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
           Expanded(child: _buildSortItem('Giá bán', 'price')),
-          Container(
-              height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
+          Container(height: 20, width: 1, color: Colors.grey.shade300, margin: const EdgeInsets.symmetric(horizontal: 12)),
           InkWell(
             onTap: () => _showFilterDialog(),
             child: Row(children: [
-              Text('Bộ lọc', style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+              Text('Bộ lọc', style: TextStyle(color: Colors.grey.shade700, fontSize: 13, fontWeight: FontWeight.w500)),
               const SizedBox(width: 4),
-              Icon(Icons.filter_list, color: Colors.grey.shade600, size: 18)
+              Icon(Icons.filter_list, color: Colors.grey.shade700, size: 16)
             ]),
           ),
         ],
@@ -171,6 +184,13 @@ class _SearchResultPageState extends State<SearchResultPage> {
     bool isActive = false;
     if (valueKey == 'popular' && _sortBy == 'popular') isActive = true;
     if (valueKey == 'price' && (_sortBy == 'priceAsc' || _sortBy == 'priceDesc')) isActive = true;
+
+    IconData icon = Icons.arrow_drop_down;
+    if (valueKey == 'price') {
+      if (_sortBy == 'priceAsc') icon = Icons.arrow_upward;
+      if (_sortBy == 'priceDesc') icon = Icons.arrow_downward;
+    }
+
     return InkWell(
       onTap: () => _showSortOptions(),
       child: Row(
@@ -178,12 +198,65 @@ class _SearchResultPageState extends State<SearchResultPage> {
         children: [
           Text(label,
               style: TextStyle(
-                  color: isActive ? primaryColor : Colors.grey.shade600,
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 14)),
-          Icon(Icons.arrow_drop_down, color: isActive ? primaryColor : Colors.grey.shade600),
+                  color: isActive ? primaryColor : Colors.grey.shade700,
+                  fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 13)),
+          const SizedBox(width: 4),
+          Icon(icon, color: isActive ? primaryColor : Colors.grey.shade400, size: 18),
         ],
       ),
+    );
+  }
+
+  Widget _buildProductGrid(CustomerModel? user) {
+    if (_foundProducts.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            const Text("Không tìm thấy sản phẩm nào.", style: TextStyle(fontSize: 16, color: Colors.grey)),
+          ],
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        double screenWidth = constraints.maxWidth;
+        int crossAxisCount = 2;
+        if (screenWidth > 600) crossAxisCount = 3;
+        if (screenWidth > 900) crossAxisCount = 4;
+
+        double itemWidth = (screenWidth - (16.0 * (crossAxisCount + 1))) / crossAxisCount;
+        double desiredHeight = 350.0;
+        double childAspectRatio = itemWidth / desiredHeight;
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(12.0),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 12.0,
+            mainAxisSpacing: 12.0,
+            childAspectRatio: childAspectRatio,
+          ),
+          itemCount: _foundProducts.length,
+          itemBuilder: (context, index) {
+            final product = _foundProducts[index];
+            final isFavorite = user?.favoriteProducts.contains(product.id) ?? false;
+            return ProductCard(
+              product: product,
+              isFavorite: isFavorite,
+              onToggleFavorite: () {
+                if (user != null) {
+                  _customerService.toggleFavoriteProduct(product.id);
+                }
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -317,45 +390,9 @@ class _SearchResultPageState extends State<SearchResultPage> {
       },
     );
   }
-
-  Widget _buildProductGrid(CustomerModel? user) {
-    if (_foundProducts.isEmpty) {
-      return const Center(
-        child: Text(
-          "Không tìm thấy sản phẩm nào.",
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-          textAlign: TextAlign.center,
-        ),
-      );
-    }
-
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16.0,
-        mainAxisSpacing: 16.0,
-        childAspectRatio: 0.48,
-      ),
-      itemCount: _foundProducts.length,
-      itemBuilder: (context, index) {
-        final product = _foundProducts[index];
-        final isFavorite = user?.favoriteProducts.contains(product.id) ?? false;
-        return ProductCard(
-          product: product,
-          isFavorite: isFavorite,
-          onToggleFavorite: () {
-            if (user != null) {
-              _customerService.toggleFavoriteProduct(product.id);
-            }
-          },
-        );
-      },
-    );
-  }
 }
 
-// ProductCard giữ nguyên như cũ
+// --- PRODUCT CARD ĐÃ FIX ĐIỀU HƯỚNG ---
 class ProductCard extends StatelessWidget {
   final Product product;
   final bool isFavorite;
@@ -373,104 +410,254 @@ class ProductCard extends StatelessWidget {
     return format.format(price);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    String imageUrl = product.images.isNotEmpty ? product.images[0] : '';
-    num oldPrice = product.originalPrice ?? (product.basePrice * 1.1);
-
+  Widget _buildMiniTag(String text, Color color) {
     return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: Colors.grey.shade200, width: 1.0),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.grey.withOpacity(0.05),
-              spreadRadius: 1,
-              blurRadius: 5,
-              offset: Offset(0, 3))
-        ],
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(2),
+        border: Border.all(color: color.withOpacity(0.3), width: 0.5),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
-                child: imageUrl.isNotEmpty
-                    ? Image.network(
-                        imageUrl,
-                        height: 150,
-                        width: double.infinity,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          height: 150,
-                          color: Colors.grey.shade200,
-                          child: Icon(Icons.broken_image, color: Colors.grey.shade400),
-                        ),
-                      )
-                    : Container(
-                        height: 150,
-                        color: Colors.grey.shade200,
-                        child: Icon(Icons.image_not_supported, color: Colors.grey.shade400),
-                      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 9, color: color, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildPromoBox() {
+    bool hasGift = product.basePrice > 20000000;
+
+    if (hasGift) {
+      return Container(
+        margin: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey.shade300),
               ),
-            ],
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(product.name,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
-                  SizedBox(height: 4),
-                  Text(product.description,
-                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
-                  SizedBox(height: 8),
-                  Text(formatCurrency(product.basePrice),
-                      style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16)),
-                  if (product.originalPrice != null)
-                    Text(formatCurrency(oldPrice),
-                        style: TextStyle(
-                            color: Colors.grey.shade500,
-                            decoration: TextDecoration.lineThrough,
-                            fontSize: 12)),
-                  Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(children: [
-                        Icon(Icons.star, color: Colors.amber, size: 16),
-                        SizedBox(width: 4),
-                        Text(product.ratingAverage.toString(), style: TextStyle(fontSize: 12))
-                      ]),
-                      IconButton(
-                        icon: Icon(
-                          isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: isFavorite ? Colors.red : Colors.grey,
-                          size: 20,
-                        ),
-                        onPressed: onToggleFavorite,
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                ],
+              child: Image.network(
+                'https://cdn-icons-png.flaticon.com/512/37/37626.png',
+                width: 12,
+                height: 12,
+                errorBuilder: (c, o, s) => Icon(Icons.card_giftcard, size: 12, color: Colors.blue),
               ),
             ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                "Tặng Chuột Gaming + Balo",
+                style: TextStyle(fontSize: 10, color: Colors.black87),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            )
+          ],
+        ),
+      );
+    } else {
+      return Container(
+        margin: const EdgeInsets.only(top: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.local_offer, size: 12, color: Colors.red.shade700),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                "Giảm 10% khi mua kèm Loa",
+                style: TextStyle(fontSize: 10, color: Colors.red.shade700, fontWeight: FontWeight.w500),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Color primaryColor = const Color(0xFFFA661B);
+    String imageUrl = product.images.isNotEmpty ? product.images[0] : '';
+    num oldPrice = product.originalPrice ?? (product.basePrice * 1.15);
+    int discount = ((oldPrice - product.basePrice) / oldPrice * 100).round();
+    int soldCount = (product.basePrice % 100).toInt() + 50;
+
+    // --- SỬA CHÍNH: BỌC GESTURE DETECTOR ĐỂ ĐIỀU HƯỚNG ---
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProductDetailScreen(productId: product.id),
           ),
-        ],
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              spreadRadius: 1,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            )
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- HÌNH ẢNH & BADGES ---
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12.0)),
+                  child: Container(
+                    color: Colors.white,
+                    height: 140,
+                    width: double.infinity,
+                    child: imageUrl.isNotEmpty
+                        ? Image.network(
+                      imageUrl,
+                      fit: BoxFit.contain,
+                      errorBuilder: (ctx, err, stack) => Icon(Icons.broken_image, color: Colors.grey.shade300),
+                    )
+                        : Icon(Icons.image_not_supported, color: Colors.grey.shade300),
+                  ),
+                ),
+                // Badge Giảm giá
+                if (discount > 0)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Text(
+                        '-$discount%',
+                        style: TextStyle(color: Colors.red.shade700, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                // Nút Yêu thích
+                Positioned(
+                  top: 4,
+                  right: 4,
+                  child: InkWell(
+                    onTap: onToggleFavorite,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                      child: Icon(
+                        isFavorite ? Icons.favorite : Icons.favorite_border,
+                        color: isFavorite ? Colors.red : Colors.grey.shade400,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // --- THÔNG TIN CHI TIẾT ---
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (product.brand != null)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            color: Colors.grey.shade100,
+                            child: Text(product.brand!.toUpperCase(),
+                                style: TextStyle(fontSize: 9, color: Colors.grey.shade600, fontWeight: FontWeight.bold)),
+                          ),
+                        Text(
+                          product.name,
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, height: 1.2),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FittedBox(
+                          child: Text(
+                            formatCurrency(product.basePrice),
+                            style: TextStyle(color: primaryColor, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ),
+                        Text(
+                          formatCurrency(oldPrice),
+                          style: TextStyle(color: Colors.grey.shade400, decoration: TextDecoration.lineThrough, fontSize: 11),
+                        ),
+
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 4,
+                          children: [
+                            _buildMiniTag('Trả góp 0%', Colors.blue),
+                            _buildMiniTag('Freeship', Colors.green),
+                          ],
+                        ),
+
+                        _buildPromoBox(),
+                      ],
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 12),
+                          const SizedBox(width: 2),
+                          Text('${product.ratingAverage}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 6),
+                          Text('Đã bán $soldCount', style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
