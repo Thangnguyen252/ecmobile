@@ -41,7 +41,7 @@ class RegisterSuccessScreen extends StatelessWidget {
             Transform.translate(
               // Offset(x, y): y là số âm để đẩy lên trên.
               // Hãy chỉnh số -80 này lớn hơn hoặc nhỏ hơn tùy vào độ rỗng của ảnh
-              offset: const Offset(20, 20),
+              offset: const Offset(8, 20),
               child: Column(
                 children: [
                   const Text(

@@ -28,16 +28,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Map<String, dynamic>? _productData;
 
   // --- STATE GIAO DIỆN ---
-  int _selectedVersionIndex = 0;
-  int _selectedColorIndex = 0;
+  String? _selectedStorage; // Ví dụ: "256GB"
+  String? _selectedColor;   // Ví dụ: "Titan Sa mạc"
   int _currentImageIndex = 0;
   int _quantity = 1; // Thêm biến số lượng
 
   // --- BIẾN DỮ LIỆU HIỂN THỊ ---
+  List<dynamic> _rawVariants = []; // Lưu toàn bộ mảng variants từ API
+  List<String> _availStorages = []; // Danh sách bộ nhớ có sẵn
+  List<String> _availColors = [];   // Danh sách màu sắc có sẵn theo bộ nhớ
   List<String> _bannerImages = [];
   List<Map<String, dynamic>> _specs = [];
-  List<String> _versions = [];
-  List<Map<String, dynamic>> _colors = [];
+  List<Map<String, dynamic>> _colors = []; // Biến legacy, giữ lại để tránh lỗi logic cũ nếu có
   List<String> _featureHighlights = [];
 
   @override
@@ -77,7 +79,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       if (highlights.isEmpty) highlights = ["Hàng chính hãng", "Bảo hành 12 tháng"];
 
       // 3. Variants
-      _processVariants(data['variants'] ?? [], data['basePrice']);
+      _processVariants(data['variants'] ?? []);
 
       // 4. Specs
       Map<String, dynamic> rawSpecs = data['specifications'] ?? {};
@@ -98,36 +100,70 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
   }
 
-  void _processVariants(List<dynamic> variants, dynamic defaultPrice) {
-    Set<String> versionSet = {};
-    Map<String, Map<String, dynamic>> colorMap = {};
+  void _processVariants(List<dynamic> variants) {
+    _rawVariants = variants;
 
-    if (variants.isEmpty) {
-      _versions = ['Tiêu chuẩn'];
-      _colors = [{'name': 'Tiêu chuẩn', 'price': defaultPrice, 'color': Colors.black}];
-      return;
-    }
-
+    // 1. Lấy danh sách Storage duy nhất
+    Set<String> storageSet = {};
     for (var v in variants) {
-      var attr = v['attributes'] as Map<String, dynamic>;
-      if (attr.containsKey('storage')) versionSet.add(attr['storage']);
-      else if (attr.containsKey('ram')) versionSet.add(attr['ram']);
-      else if (attr.containsKey('screen')) versionSet.add(attr['screen']);
-
-      if (attr.containsKey('color')) {
-        String colorName = attr['color'];
-        if (!colorMap.containsKey(colorName)) {
-          colorMap[colorName] = {
-            'name': colorName,
-            'price': attr['price'] ?? defaultPrice,
-            'color': _mapColorStringToColor(colorName)
-          };
-        }
+      var attr = v['attributes'] ?? {};
+      if (attr.containsKey('storage')) {
+        storageSet.add(attr['storage'].toString());  // ✅ Đơn giản: storage là string
       }
     }
-    _versions = versionSet.isNotEmpty ? versionSet.toList() : ['Tiêu chuẩn'];
-    _colors = colorMap.values.toList();
-    if (_colors.isEmpty) _colors = [{'name': 'Mặc định', 'price': defaultPrice, 'color': Colors.black}];
+
+    _availStorages = storageSet.toList();
+
+    // 2. Sắp xếp theo thứ tự dung lượng (tùy chọn)
+    _availStorages.sort((a, b) {
+      int getSize(String s) {
+        if (s.contains('GB')) return int.parse(s.replaceAll('GB', ''));
+        if (s.contains('TB')) return int.parse(s.replaceAll('TB', '')) * 1024;
+        return 0;
+      }
+      return getSize(a).compareTo(getSize(b));
+    });
+
+    // 3. Chọn mặc định cái đầu tiên
+    if (_availStorages.isNotEmpty) {
+      _selectedStorage = _availStorages[0];
+      _updateAvailableColorsForStorage(_selectedStorage!);
+    }
+  }
+
+  // SỬA LỖI 1: Đã xóa hàm trùng lặp, chỉ giữ lại 1 hàm duy nhất này
+  // Hàm phụ trợ: Lọc ra các màu có sẵn cho Storage đang chọn
+  void _updateAvailableColorsForStorage(String storage) {
+    Set<String> colorSet = {};
+    for (var v in _rawVariants) {
+      var attr = v['attributes'] ?? {};
+      // ✅ So sánh đơn giản: storage là string
+      if (attr['storage'] == storage && attr.containsKey('color')) {
+        colorSet.add(attr['color']);
+      }
+    }
+    _availColors = colorSet.toList();
+
+    // Chọn màu đầu tiên
+    if (_availColors.isNotEmpty) {
+      _selectedColor = _availColors[0];
+    } else {
+      _selectedColor = null;
+    }
+  }
+
+  // Hàm phụ trợ: Lấy variant object cụ thể đang được chọn
+  Map<String, dynamic>? _getSelectedVariant() {
+    try {
+      return _rawVariants.firstWhere((v) {
+        var attr = v['attributes'] ?? {};
+        // ✅ So sánh đơn giản: cả storage và color đều là string
+        return attr['storage'] == _selectedStorage &&
+            attr['color'] == _selectedColor;
+      });
+    } catch (e) {
+      return null;
+    }
   }
 
   List<Map<String, dynamic>> _parseSpecifications(Map<String, dynamic> specs) {
@@ -173,7 +209,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget build(BuildContext context) {
     final Color primaryColor = AppColors.primary;
     final Color textRed = Colors.red;
-
+    Map<String, dynamic>? currentVariant = _getSelectedVariant();
     if (_isLoading) {
       return Scaffold(backgroundColor: Colors.white, body: Center(child: CircularProgressIndicator(color: primaryColor)));
     }
@@ -181,16 +217,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       return Scaffold(appBar: AppBar(), body: Center(child: Text(_errorMessage ?? "Lỗi")));
     }
 
-    // Tính toán giá
-    num currentPrice = _colors.isNotEmpty && _colors[_selectedColorIndex]['price'] is num
-        ? _colors[_selectedColorIndex]['price']
+    // 1. Lấy giá: Ưu tiên giá variant, nếu không có lấy giá gốc
+    num currentPrice = currentVariant != null
+        ? (currentVariant['price'] ?? _productData!['basePrice'])
         : (_productData!['basePrice'] ?? 0);
     num originalPrice = _productData!['originalPrice'] ?? 0;
-
     // Rating
     num ratingAverage = _productData!['ratingAverage'] ?? 0;
     num reviewCount = _productData!['reviewCount'] ?? 0;
-
+    // 2. Lấy ảnh: Ưu tiên ảnh variant, nếu không có lấy ảnh bìa đầu tiên
+    String displayImage = _bannerImages.isNotEmpty ? _bannerImages[0] : "";
+    if (currentVariant != null) {
+      var attr = currentVariant['attributes'];
+      if (attr != null && attr['imageURL'] != null && attr['imageURL'].toString().isNotEmpty) {
+        displayImage = attr['imageURL'];
+      }
+    }
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -224,7 +266,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         const Divider(height: 1, color: Colors.grey),
 
                         // 1. BANNER TÍNH NĂNG
-                        _buildFeatureBanner(primaryColor),
+                        // SỬA LỖI 2: Đã khớp tham số truyền vào
+                        _buildFeatureBanner(primaryColor, displayImage),
 
                         // 2. GIÁ & TÊN & ĐÁNH GIÁ
                         Padding(
@@ -242,11 +285,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   ),
                                   const SizedBox(width: 10),
 
-                                  // --- SỬA Ở ĐÂY: Thêm Transform.translate ---
                                   if (originalPrice > currentPrice)
                                     Transform.translate(
-                                      // Tùy chỉnh vị trí: Offset(ngang, dọc)
-                                      // Ví dụ: (0, -4) là giữ nguyên ngang, nhích lên trên 4 đơn vị
                                       offset: const Offset(0, -4),
                                       child: Text(
                                         _formatCurrency(originalPrice),
@@ -254,7 +294,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                             fontSize: 16, color: Colors.grey, decoration: TextDecoration.lineThrough),
                                       ),
                                     ),
-                                  // ------------------------------------------
                                 ],
                               ),
 
@@ -312,110 +351,125 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                         const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
 
-                        // 4. PHIÊN BẢN (Variants)
-                        if (_versions.length > 1 || _versions[0] != 'Tiêu chuẩn')
+                        // --- 4. PHIÊN BẢN (Variants) ---
+                        if (_availStorages.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text("Chọn phiên bản",
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                const Text("Chọn phiên bản", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                                 const SizedBox(height: 10),
                                 Wrap(
                                   spacing: 10,
                                   runSpacing: 10,
-                                  children: List.generate(_versions.length, (index) {
-                                    bool isSelected = _selectedVersionIndex == index;
+                                  children: _availStorages.map((storage) {
+                                    bool isSelected = _selectedStorage == storage;
                                     return GestureDetector(
-                                      onTap: () => setState(() => _selectedVersionIndex = index),
-                                      child: CustomPaint(
-                                        painter: isSelected ? _CornerTrianglePainter(primaryColor: primaryColor) : null,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(
-                                                color: isSelected ? primaryColor : Colors.grey.shade300),
+                                      onTap: () {
+                                        setState(() {
+                                          _selectedStorage = storage;
+                                          _updateAvailableColorsForStorage(storage);
+                                          _currentImageIndex = 0;
+                                        });
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                              color: isSelected ? primaryColor : Colors.grey.shade300,
+                                              width: isSelected ? 2 : 1
                                           ),
-                                          child: Text(_versions[index],
-                                              style: TextStyle(
-                                                  color: isSelected ? primaryColor : Colors.black,
-                                                  fontWeight:
-                                                      isSelected ? FontWeight.bold : FontWeight.normal)),
+                                        ),
+                                        child: Text(
+                                          storage,
+                                          style: TextStyle(
+                                              color: isSelected ? primaryColor : Colors.black,
+                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
+                                          ),
                                         ),
                                       ),
                                     );
-                                  }),
+                                  }).toList(),
                                 ),
                               ],
                             ),
                           ),
 
-                        // 5. MÀU SẮC
-                        if (_colors.isNotEmpty)
+                        // --- 5. MÀU SẮC ---
+                        if (_availColors.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text("Chọn màu sắc",
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                                const Text("Chọn màu sắc", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                                 const SizedBox(height: 10),
                                 SingleChildScrollView(
                                   scrollDirection: Axis.horizontal,
                                   child: Row(
-                                    children: List.generate(_colors.length, (index) {
-                                      bool isSelected = _selectedColorIndex == index;
-                                      var colorItem = _colors[index];
+                                    children: _availColors.map((colorName) {
+                                      bool isSelected = _selectedColor == colorName;
+
+                                      // Tìm variant tương ứng
+                                      var variantForThisColor = _rawVariants.firstWhere((v) {
+                                        var attr = v['attributes'];
+                                        // ✅ So sánh đơn giản
+                                        return attr['storage'] == _selectedStorage &&
+                                            attr['color'] == colorName;
+                                      }, orElse: () => {});
+
+                                      String variantImg = variantForThisColor['attributes']?['imageURL'] ?? _bannerImages[0];
+                                      num variantPrice = variantForThisColor['price'] ?? 0;
+
+                                      // ... phần còn lại giữ nguyên
+
                                       return GestureDetector(
-                                        onTap: () => setState(() => _selectedColorIndex = index),
+                                        onTap: () => setState(() {
+                                          _selectedColor = colorName;
+                                          _currentImageIndex = 0;
+                                        }),
                                         child: Container(
                                           margin: const EdgeInsets.only(right: 12),
-                                          child: CustomPaint(
-                                            painter: isSelected
-                                                ? _CornerTrianglePainter(primaryColor: primaryColor)
-                                                : null,
-                                            child: Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                border: Border.all(
-                                                    color: isSelected ? primaryColor : Colors.grey.shade300),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  Container(
-                                                    width: 30,
-                                                    height: 30,
-                                                    decoration: BoxDecoration(
-                                                        border: Border.all(color: Colors.grey.shade300),
-                                                        borderRadius: BorderRadius.circular(4)),
-                                                    child: ClipRRect(
-                                                        borderRadius: BorderRadius.circular(4),
-                                                        child: Image.network(_bannerImages[0],
-                                                            fit: BoxFit.cover)),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(colorItem['name'],
-                                                          style: const TextStyle(
-                                                              fontWeight: FontWeight.bold, fontSize: 12)),
-                                                      Text(_formatCurrency(colorItem['price']),
-                                                          style: const TextStyle(
-                                                              fontSize: 11, color: Colors.grey)),
-                                                    ],
-                                                  )
-                                                ],
-                                              ),
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(
+                                                color: isSelected ? primaryColor : Colors.grey.shade300,
+                                                width: isSelected ? 2 : 1
                                             ),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                width: 35, height: 35,
+                                                decoration: BoxDecoration(
+                                                    border: Border.all(color: Colors.grey.shade200),
+                                                    borderRadius: BorderRadius.circular(4)
+                                                ),
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  child: Image.network(variantImg, fit: BoxFit.cover),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(colorName, style: TextStyle(
+                                                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                                      fontSize: 12
+                                                  )),
+                                                  Text(_formatCurrency(variantPrice), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                                ],
+                                              )
+                                            ],
                                           ),
                                         ),
                                       );
-                                    }),
+                                    }).toList(),
                                   ),
                                 ),
                               ],
@@ -447,7 +501,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   children: _specs
                                       .take(6)
                                       .map((spec) => _buildSpecItem(
-                                          spec['label'], spec['value'], _specs.indexOf(spec) % 2 == 0))
+                                      spec['label'], spec['value'], _specs.indexOf(spec) % 2 == 0))
                                       .toList(),
                                 ),
                               ),
@@ -466,9 +520,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                         const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
 
-                        // 8. ĐẶC ĐIỂM NỔI BẬT: ĐÃ XÓA THEO YÊU CẦU
-
-                        // 9. ĐÁNH GIÁ SẢN PHẨM (Giao diện Mới)
+                        // 9. ĐÁNH GIÁ SẢN PHẨM
                         _buildProductRatingSection(primaryColor, ratingAverage, reviewCount),
 
                         const Divider(thickness: 4, color: Color(0xFFF5F5F5)),
@@ -501,7 +553,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             "Tin tức liên quan",
                             Column(
                               children: [
-                                // SỬ DỤNG ASSET ĐỊA PHƯƠNG
                                 _buildNewsItem("assets/images/tintuclienquan2.jpg",
                                     "Đánh giá chi tiết hiệu năng sản phẩm: Quái vật cấu hình?"),
                                 const SizedBox(height: 10),
@@ -516,7 +567,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 ),
 
-                // BOTTOM BAR (Đã chỉnh sửa bỏ liên hệ)
+                // BOTTOM BAR
                 _buildBottomBar(primaryColor),
               ],
             );
@@ -528,10 +579,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   // WIDGET HELPERS
   // =======================================================
 
-  // --- WIDGET ĐÁNH GIÁ MỚI ---
   Widget _buildProductRatingSection(Color primaryColor, num rating, num count) {
-    // Dùng dữ liệu từ Firebase nếu có, nếu count=0 thì giả lập 1 chút để UI không bị trống
-    // Hoặc giữ nguyên logic hiển thị
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
       child: Column(
@@ -556,7 +604,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
           const SizedBox(height: 15),
 
-          // --- TỔNG QUAN ĐÁNH GIÁ ---
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -611,7 +658,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
           const SizedBox(height: 20),
 
-          // --- PROGRESS BARS (Giả lập số liệu dựa trên count) ---
           _buildRatingBar(5, count, (count * 0.7).toInt(), primaryColor),
           _buildRatingBar(4, count, (count * 0.2).toInt(), primaryColor),
           _buildRatingBar(3, count, (count * 0.1).toInt(), primaryColor),
@@ -620,7 +666,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
           const SizedBox(height: 30),
 
-          // --- ĐÁNH GIÁ TRẢI NGHIỆM ---
           const Text(
             'Đánh giá theo trải nghiệm',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -682,7 +727,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  // --- WIDGET ƯU ĐÃI SINH VIÊN ---
   Widget _buildOfferCard(Color primaryColor, Color textRed) {
     return Container(
       padding: const EdgeInsets.all(12.0),
@@ -745,7 +789,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  // --- WIDGET KHUYẾN MÃI & CAM KẾT ---
   Widget _buildPromotionsAndCommitment(Color primaryColor, Color textRed) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
@@ -823,9 +866,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  // --- WIDGET CŨ (Giữ nguyên) ---
-
-  Widget _buildFeatureBanner(Color primaryColor) {
+  // SỬA LỖI 2 và 3: Thêm tham số displayImage vào hàm
+  Widget _buildFeatureBanner(Color primaryColor, String displayImage) {
     Color gradientStart = const Color(0xFFFF9966);
     Color gradientEnd = const Color(0xFF80B3FF);
 
@@ -882,10 +924,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(10),
                             child: Image.network(
-                              _bannerImages[_currentImageIndex],
+                              _currentImageIndex == 0 ? displayImage : _bannerImages[_currentImageIndex],
                               fit: BoxFit.cover,
                               errorBuilder: (context, error, stackTrace) =>
-                                  const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
+                              const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
                             ),
                           ),
                         ),
@@ -897,9 +939,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 _buildFeatureItem("Thông tin sản phẩm đang cập nhật..."),
                               if (_featureHighlights.isNotEmpty)
                                 ..._featureHighlights.take(3).map((text) => Padding(
-                                      padding: const EdgeInsets.only(bottom: 6.0),
-                                      child: _buildFeatureItem(text),
-                                    ))
+                                  padding: const EdgeInsets.only(bottom: 6.0),
+                                  child: _buildFeatureItem(text),
+                                ))
                                     .toList(),
                             ],
                           ),
@@ -1022,12 +1064,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(5),
             child: Image.asset(
-              // <<< ĐÃ SỬA TỪ Image.network THÀNH Image.asset
               imagePath,
               fit: BoxFit.cover,
-              // Thêm errorBuilder để xử lý trường hợp không tìm thấy ảnh
               errorBuilder: (context, error, stackTrace) =>
-                  const Center(child: Icon(Icons.image_not_supported, color: Colors.grey)),
+              const Center(child: Icon(Icons.image_not_supported, color: Colors.grey)),
             ),
           ),
         ),
@@ -1088,7 +1128,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
-  // BOTTOM BAR MỚI (Đã xóa nút Liên Hệ)
   Widget _buildBottomBar(Color primaryColor) {
     return Container(
       padding: const EdgeInsets.all(10),
@@ -1119,15 +1158,25 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               child: TextButton(
                 onPressed: () {
                   if (_productData != null) {
-                    // Lấy thông tin sản phẩm
+                    // SỬA LỖI 4: Tính toán lại giá và ảnh dựa trên variant đã chọn thay vì dùng index cũ
                     final productName = _productData!['name'] ?? 'Sản phẩm';
-                    final productImage = _bannerImages.isNotEmpty ? _bannerImages[0] : '';
-                    final currentPrice = (_colors.isNotEmpty
-                        ? _colors[_selectedColorIndex]['price']
-                        : _productData!['basePrice'])
-                        .toDouble();
-                    final originalPrice =
-                        (_productData!['originalPrice'] ?? currentPrice).toDouble();
+
+                    // Lấy variant hiện tại
+                    Map<String, dynamic>? currentVariant = _getSelectedVariant();
+
+                    // Lấy ảnh: ưu tiên ảnh variant, nếu không có thì lấy banner đầu tiên
+                    String productImage = _bannerImages.isNotEmpty ? _bannerImages[0] : '';
+                    if (currentVariant != null && currentVariant['attributes']?['imageURL'] != null) {
+                      productImage = currentVariant['attributes']['imageURL'];
+                    }
+
+                    // Lấy giá: ưu tiên giá variant
+                    final double currentPrice = currentVariant != null
+                        ? (currentVariant['price'] ?? _productData!['basePrice']).toDouble()
+                        : (_productData!['basePrice'] ?? 0).toDouble();
+
+                    final double originalPrice =
+                    (_productData!['originalPrice'] ?? currentPrice).toDouble();
 
                     // Tạo một CartItemModel
                     final item = CartItemModel(
@@ -1196,22 +1245,4 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       ),
     );
   }
-}
-
-class _CornerTrianglePainter extends CustomPainter {
-  final Color primaryColor;
-  _CornerTrianglePainter({required this.primaryColor});
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = primaryColor;
-    final path = Path()
-      ..moveTo(size.width, 0)
-      ..lineTo(size.width - 15, 0)
-      ..lineTo(size.width, 15)
-      ..close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
