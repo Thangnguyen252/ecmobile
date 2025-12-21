@@ -37,8 +37,6 @@ class _EventChristmasPageState extends State<EventChristmasPage> with TickerProv
   @override
   void initState() {
     super.initState();
-
-    // 1. Rung lắc
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -48,14 +46,12 @@ class _EventChristmasPageState extends State<EventChristmasPage> with TickerProv
     );
     _shakeController.repeat(reverse: true);
 
-    // 2. Mở quà - OPTIMIZED: Shorter duration
     _openController = AnimationController(
-      duration: const Duration(milliseconds: 1800), // Faster!
+      duration: const Duration(milliseconds: 1700),
       vsync: this,
     );
 
-    // OPTIMIZED: Scale nhỏ hơn, kết thúc sớm hơn
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 8.0).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 6.0).animate(
       CurvedAnimation(
           parent: _openController,
           curve: const Interval(0.0, 0.5, curve: Curves.easeInQuad) // Shorter interval
@@ -63,7 +59,7 @@ class _EventChristmasPageState extends State<EventChristmasPage> with TickerProv
     );
 
     // Nắp bay lên
-    _lidOffsetAnimation = Tween<double>(begin: -80, end: -400).animate(
+    _lidOffsetAnimation = Tween<double>(begin: -80, end: -300).animate(
       CurvedAnimation(parent: _openController, curve: const Interval(0.0, 0.5, curve: Curves.easeOutQuad)),
     );
 
@@ -71,7 +67,6 @@ class _EventChristmasPageState extends State<EventChristmasPage> with TickerProv
       CurvedAnimation(parent: _openController, curve: const Interval(0.0, 0.5, curve: Curves.easeOutBack)),
     );
 
-    // CRITICAL: Fade out entire overlay quickly
     _fadeOutAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
       CurvedAnimation(parent: _openController, curve: const Interval(0.4, 0.7, curve: Curves.easeOut)),
     );
@@ -208,9 +203,7 @@ class _EventChristmasPageState extends State<EventChristmasPage> with TickerProv
             ),
           ),
 
-          // =========================================
-          // LỚP 2: TUYẾT RƠI - ONLY WHEN OPENED
-          // =========================================
+
           if (_isOpened)
             IgnorePointer(
               ignoring: true,
@@ -219,9 +212,7 @@ class _EventChristmasPageState extends State<EventChristmasPage> with TickerProv
               ),
             ),
 
-          // =========================================
-          // LỚP 3: HỘP QUÀ (Overlay) - OPTIMIZED
-          // =========================================
+
           if (_showOverlay)
             GestureDetector(
               onTap: _handleOpenGift,
@@ -499,9 +490,7 @@ class _EventChristmasPageState extends State<EventChristmasPage> with TickerProv
   }
 }
 
-// ==========================================================
-// OPTIMIZED SNOWFALL WIDGET
-// ==========================================================
+
 class SnowfallAnimation extends StatefulWidget {
   final int numberOfFlakes;
 
