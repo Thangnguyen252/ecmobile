@@ -11,6 +11,7 @@ import 'package:ecmobile/screens/Order/payment_success_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ecmobile/services/order_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:ecmobile/services/cart_service.dart';
 
 enum PaymentMethod { qr, cod }
 
@@ -38,6 +39,7 @@ class _CheckoutPageState extends State<CheckoutPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final OrderService _orderService = OrderService();
+  final CartService _cartService = CartService();
   User? _currentUser;
 
   String _userEmail = "Chưa có";
@@ -944,6 +946,20 @@ class _CheckoutPageState extends State<CheckoutPage>
             width: double.infinity,
             height: 48,
             child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Thanh toán',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.white,
+                ),
+              ),
               onPressed: () async {
                 if (_currentUser == null) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -974,9 +990,23 @@ class _CheckoutPageState extends State<CheckoutPage>
                   'createdAt': Timestamp.now(),
                 };
 
+
+                try {
+
+                  await Future.wait(widget.itemsToCheckout.map(
+                          (item) => _cartService.deleteItem(item.cartItemId)
+                  ));
+                  print("Đã xóa sản phẩm khỏi giỏ hàng thành công");
+                } catch (e) {
+                  print("Lỗi khi xóa khỏi giỏ hàng: $e");
+
+                }
+
+
+
                 if (_selectedPaymentMethod == PaymentMethod.qr) {
                   orderData['paymentMethod'] = 2;
-                  orderData['status'] = "Đã thanh toán";
+                  orderData['status'] = "Đã thanh toán"; // Giả lập đã TT
 
                   String qrContent = '${randomAlpha(6).toUpperCase()}${randomNumeric(3)}';
 
@@ -991,6 +1021,7 @@ class _CheckoutPageState extends State<CheckoutPage>
                     ),
                   );
                 } else {
+                  // COD
                   orderData['paymentMethod'] = 1;
                   orderData['status'] = "Chờ xác nhận";
 
@@ -1002,27 +1033,12 @@ class _CheckoutPageState extends State<CheckoutPage>
                   );
                 }
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Thanh toán',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.white,
-                ),
-              ),
             ),
           ),
         ],
       ),
     );
   }
-
   Widget _buildProductListSection() {
     return Column(
       children: widget.itemsToCheckout.map((item) => _buildProductCard(item)).toList(),
@@ -1156,7 +1172,6 @@ class _CheckoutPageState extends State<CheckoutPage>
       ],
     );
   }
-  // --- HÀM BUILD GIAO DIỆN DROPDOWN (Dán vào trong _CheckoutPageState) ---
   Widget _buildAddressDropdownSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
