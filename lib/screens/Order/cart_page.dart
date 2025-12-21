@@ -520,14 +520,23 @@ class _CartPageState extends State<CartPage> {
                 height: 48,
                 child: ElevatedButton(
                   onPressed: totalPrice > 0
-                      ? () {
+                      ? () async {
                     final selectedItems = cartItems.where((i) => i.isSelected).toList();
-                    Navigator.push(
+
+                    // Navigate to checkout and wait for result
+                    final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => CheckoutPage(itemsToCheckout: selectedItems),
                       ),
                     );
+
+                    // If checkout was successful, remove items from cart
+                    if (result == true) {
+                      for (var item in selectedItems) {
+                        await _cartService.deleteItem(item.cartItemId);
+                      }
+                    }
                   }
                       : null,
                   style: ElevatedButton.styleFrom(

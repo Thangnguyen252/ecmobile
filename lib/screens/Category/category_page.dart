@@ -10,7 +10,7 @@ class CategoryPage extends StatelessWidget {
   final List<Map<String, dynamic>> _allCategories = const [
     // --- GROUP 1: ELECTRONICS ---
     {
-      'image': 'https://cdn-v3.xtmobile.vn/vnt_upload/product/09_2025/thumbs/600_iPhone_17_Pro_trang_2.jpg',
+      'image': 'https://alephksa.com/cdn/shop/files/iPhone_16_Pro_Max_Natural_Titanium_PDP_Image_Position_1__en-ME_a46d3e5e-dad7-4584-9581-342342e640bc.jpg?v=1750067799',
       'title': 'Điện thoại',
       'id': 'cate_phone',
       'brands': ['Apple', 'Samsung', 'Xiaomi', 'Vivo', 'OPPO']

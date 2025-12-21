@@ -6,8 +6,7 @@ import '../models/chat_model.dart';
 
 class GroqService {
   // --- CẤU HÌNH API ---
-  // DO NOT HARDCODE API KEYS. Use environment variables instead.
-  static const String _apiKey = String.fromEnvironment('GROQ_API_KEY');
+  static const String _apiKey = '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';
   static const String _apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
 
   // Model Llama 3 8B: Nhanh, nhẹ, tối ưu cho phản hồi tức thì
@@ -163,7 +162,7 @@ class GroqService {
 
       // Prompt được tinh chỉnh để xử lý việc "Cửa hàng có kinh doanh không"
       String systemPrompt = """
-      Bạn là trợ lý ảo của cửa hàng EC Mobile.
+      Bạn là trợ lý ảo của cửa hàng Darter.
       
       DỮ LIỆU SẢN PHẨM KHỚP VỚI CÂU HỎI:
       $productContext
@@ -172,7 +171,8 @@ class GroqService {
       1. Cửa hàng CÓ kinh doanh: Laptop, Điện thoại, Màn hình, Tai nghe. Nếu khách hỏi có bán các loại này không, hãy trả lời là CÓ và giới thiệu các sản phẩm trong danh sách trên.
       2. Dựa vào danh sách trên để tư vấn chi tiết (giá, cấu hình).
       3. Nếu trong danh sách trên không có sản phẩm cụ thể khách tìm (ví dụ khách tìm 'MacBook' nhưng danh sách chỉ có 'Lenovo'), hãy khéo léo giới thiệu sản phẩm đang có (Lenovo).
-      4. Trả lời ngắn gọn, thân thiện, không quá 3 câu.
+      4. Trả lời ngắn gọn, thân thiện.
+      5. Nếu khách hàng hỏi về một loại sản phẩm không có trong cơ sở dữ liệu, sẽ trả lời là cửa hàng không kinh doanh sản phẩm hoặc mặt hàng đó, và có thể gợi ý mặt hàng tương tự mà cửa hàng có trong cơ sở dữ liệu.
       """;
 
       List<Map<String, String>> messages = [];

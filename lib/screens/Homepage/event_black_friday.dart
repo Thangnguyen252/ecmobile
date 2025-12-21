@@ -15,10 +15,8 @@ class EventBlackFridayPage extends StatefulWidget {
 class _EventBlackFridayPageState extends State<EventBlackFridayPage> {
   final CustomerService _customerService = CustomerService();
 
-  // Biến trạng thái: true = đang khóa (màn hình đen), false = đã mở
   bool _isLocked = true;
 
-  // Màu chủ đạo Black Friday
   final Color bfRed = const Color(0xFFE50914);
 
   @override
