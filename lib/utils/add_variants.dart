@@ -3,7 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/widgets.dart';
 
 void main() async {
-  // ✅ QUAN TRỌNG: Khởi tạo Flutter bindings trước
+  // Khởi tạo Flutter bindings
   WidgetsFlutterBinding.ensureInitialized();
 
   // Khởi tạo Firebase
@@ -11,127 +11,90 @@ void main() async {
   await Firebase.initializeApp();
   print('✅ Firebase đã được khởi tạo!');
 
-  // Gọi hàm thêm variants
-  await addVariantsToProduct();
+  // Gọi hàm thêm variants cho tai nghe Sony
+  await addHeadphoneVariants();
 
-  // Thoát script sau khi hoàn tất
   print('👋 Script đã hoàn tất. Nhấn Ctrl+C hoặc q để thoát.');
 }
 
-Future<void> addVariantsToProduct() async {
+Future<void> addHeadphoneVariants() async {
   try {
-    print('\n📦 Bắt đầu thêm variants vào sản phẩm iPhone 16 Pro Max...');
+    print('\n🎧 Bắt đầu thêm variants cho tai nghe Sony WH-CH520...');
 
-    // ID của sản phẩm cần cập nhật
-    String productId = 'ip16_promax';
+    // ID của sản phẩm tai nghe
+    String productId = 'sony_wh_ch520';
 
-    // Định nghĩa variants mới
+    // Giá cơ bản
+    int basePrice = 1190000;
+    int originalPrice = 1290000;
+
+    // Định nghĩa variants cho tai nghe (chỉ có màu, không có dung lượng)
     List<Map<String, dynamic>> variants = [
-      // Titan Đen - 256GB
+      // Màu Xanh
       {
         'attributes': {
-          'color': 'Titan Đen',
-          'storage': '256GB',
-          'imageURL': 'https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-max-titan-den.png'
+          'color': 'Xanh',
+          'imageURL': 'https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-khong-day-sony-wh-ch520-xanh_2.jpg'
         },
-        'price': 30590000,
-        'sku': 'ip16pm_den_256gb',
-        'stock': 50
-      },
-      // Titan Đen - 512GB
-      {
-        'attributes': {
-          'color': 'Titan Đen',
-          'storage': '512GB',
-          'imageURL': 'https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-max-titan-den.png'
-        },
-        'price': 35590000,
-        'sku': 'ip16pm_den_512gb',
-        'stock': 30
-      },
-      // Titan Đen - 1TB
-      {
-        'attributes': {
-          'color': 'Titan Đen',
-          'storage': '1TB',
-          'imageURL': 'https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-max-titan-den.png'
-        },
-        'price': 40590000,
-        'sku': 'ip16pm_den_1tb',
-        'stock': 6
-      },
-
-      // Titan Trắng - 256GB
-      {
-        'attributes': {
-          'color': 'Titan Trắng',
-          'storage': '256GB',
-          'imageURL': 'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max.png'
-        },
-        'price': 30590000,
-        'sku': 'ip16pm_trang_256gb',
+        'price': basePrice,
+        'originalPrice': originalPrice,
+        'sku': 'ch520_blue',
         'stock': 40
       },
-      // Titan Trắng - 512GB
+
+      // Màu Be (Kem)
       {
         'attributes': {
-          'color': 'Titan Trắng',
-          'storage': '512GB',
-          'imageURL': 'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max.png'
+          'color': 'Be',
+          'imageURL': 'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/o/sony-wh-ch520-go-3.png'
         },
-        'price': 35590000,
-        'sku': 'ip16pm_trang_512gb',
-        'stock': 5
-      },
-      // Titan Trắng - 1TB
-      {
-        'attributes': {
-          'color': 'Titan Trắng',
-          'storage': '1TB',
-          'imageURL': 'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max.png'
-        },
-        'price': 40590000,
-        'sku': 'ip16pm_trang_1tb',
-        'stock': 3
+        'price': basePrice,
+        'originalPrice': originalPrice,
+        'sku': 'ch520_beige',
+        'stock': 35
       },
 
-      // Titan Sa mạc - 256GB
+      // Màu Đen
       {
         'attributes': {
-          'color': 'Titan Sa mạc',
-          'storage': '256GB',
-          'imageURL': 'https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-max-titan-sa-mac.png'
+          'color': 'Đen',
+          'imageURL': 'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/t/a/tai-nghe-chup-tai-sony-wh-ch520-_2_.png'
         },
-        'price': 30590000,
-        'sku': 'ip16pm_samac_256gb',
-        'stock': 15
+        'price': basePrice,
+        'originalPrice': originalPrice,
+        'sku': 'ch520_black',
+        'stock': 50
       },
-      // Titan Sa mạc - 1TB
+
+      // Màu Trắng
       {
         'attributes': {
-          'color': 'Titan Sa mạc',
-          'storage': '1TB',
-          'imageURL': 'https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-max-titan-sa-mac.png'
+          'color': 'Trắng',
+          'imageURL': 'https://cdn2.cellphones.com.vn/insecure/rs:fill:0:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/s/o/sony-wh-ch520-2.png'
         },
-        'price': 40590000,
-        'sku': 'ip16pm_samac_1tb',
-        'stock': 5
+        'price': basePrice,
+        'originalPrice': originalPrice,
+        'sku': 'ch520_white',
+        'stock': 45
       }
     ];
 
     // Hiển thị thông tin
     print('📝 Tổng số variants: ${variants.length}');
-    print('🎯 Product ID: $productId\n');
+    print('🎯 Product ID: $productId');
+    print('💰 Giá gốc: ${_formatPrice(originalPrice)}');
+    print('💰 Giá khuyến mãi: ${_formatPrice(basePrice)}\n');
 
     // In chi tiết từng variant
     for (int i = 0; i < variants.length; i++) {
       var v = variants[i];
       print('Variant ${i + 1}:');
       print('  - Màu: ${v['attributes']['color']}');
-      print('  - Dung lượng: ${v['attributes']['storage']}');
       print('  - Giá: ${_formatPrice(v['price'])}');
+      print('  - Giá gốc: ${_formatPrice(v['originalPrice'])}');
       print('  - SKU: ${v['sku']}');
-      print('  - Tồn kho: ${v['stock']}');
+      print('  - Tồn kho: ${v['stock']} cái');
+      print('  - Ảnh: ${v['attributes']['imageURL'].substring(0, 60)}...');
       print('');
     }
 
@@ -142,6 +105,8 @@ Future<void> addVariantsToProduct() async {
         .doc(productId)
         .update({
       'variants': variants,
+      'basePrice': basePrice,
+      'originalPrice': originalPrice,
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
@@ -174,32 +139,26 @@ void _printSummary(List<Map<String, dynamic>> variants) {
     colorCount[color] = (colorCount[color] ?? 0) + 1;
   }
 
-  print('\n🎨 Phân bổ theo màu:');
+  print('\n🎨 Các màu sắc có sẵn:');
   colorCount.forEach((color, count) {
-    print('  - $color: $count variants');
-  });
-
-  // Đếm theo dung lượng
-  Map<String, int> storageCount = {};
-  for (var v in variants) {
-    String storage = v['attributes']['storage'];
-    storageCount[storage] = (storageCount[storage] ?? 0) + 1;
-  }
-
-  print('\n💾 Phân bổ theo dung lượng:');
-  storageCount.forEach((storage, count) {
-    print('  - $storage: $count variants');
+    var variant = variants.firstWhere((v) => v['attributes']['color'] == color);
+    print('  - $color: ${variant['stock']} cái');
   });
 
   // Tính tổng tồn kho
   int totalStock = variants.fold(0, (sum, v) => sum + (v['stock'] as int));
-  print('\n📦 Tổng tồn kho: $totalStock sản phẩm');
+  print('\n📦 Tổng tồn kho: $totalStock cái');
 
-  // Giá min-max
-  List<int> prices = variants.map((v) => v['price'] as int).toList();
-  int minPrice = prices.reduce((a, b) => a < b ? a : b);
-  int maxPrice = prices.reduce((a, b) => a > b ? a : b);
-  print('\n💰 Khoảng giá: ${_formatPrice(minPrice)} - ${_formatPrice(maxPrice)}');
+  // Giá
+  int price = variants[0]['price'];
+  int originalPrice = variants[0]['originalPrice'];
+  int discount = originalPrice - price;
+  double discountPercent = (discount / originalPrice * 100);
+
+  print('\n💰 Thông tin giá:');
+  print('  - Giá gốc: ${_formatPrice(originalPrice)}');
+  print('  - Giá khuyến mãi: ${_formatPrice(price)}');
+  print('  - Tiết kiệm: ${_formatPrice(discount)} (${discountPercent.toStringAsFixed(1)}%)');
 
   print('═══════════════════════════════════════\n');
 }

@@ -103,31 +103,58 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void _processVariants(List<dynamic> variants) {
     _rawVariants = variants;
 
-    // 1. Lấy danh sách Storage duy nhất
-    Set<String> storageSet = {};
-    for (var v in variants) {
+    // Kiểm tra xem có storage hay không
+    bool hasStorage = variants.any((v) {
       var attr = v['attributes'] ?? {};
-      if (attr.containsKey('storage')) {
-        storageSet.add(attr['storage'].toString());  // ✅ Đơn giản: storage là string
-      }
-    }
-
-    _availStorages = storageSet.toList();
-
-    // 2. Sắp xếp theo thứ tự dung lượng (tùy chọn)
-    _availStorages.sort((a, b) {
-      int getSize(String s) {
-        if (s.contains('GB')) return int.parse(s.replaceAll('GB', ''));
-        if (s.contains('TB')) return int.parse(s.replaceAll('TB', '')) * 1024;
-        return 0;
-      }
-      return getSize(a).compareTo(getSize(b));
+      return attr.containsKey('storage');
     });
 
-    // 3. Chọn mặc định cái đầu tiên
-    if (_availStorages.isNotEmpty) {
-      _selectedStorage = _availStorages[0];
-      _updateAvailableColorsForStorage(_selectedStorage!);
+    if (hasStorage) {
+      // ========== XỬ LÝ SẢN PHẨM CÓ STORAGE (iPhone) ==========
+      Set<String> storageSet = {};
+      for (var v in variants) {
+        var attr = v['attributes'] ?? {};
+        if (attr.containsKey('storage')) {
+          storageSet.add(attr['storage'].toString());
+        }
+      }
+
+      _availStorages = storageSet.toList();
+
+      // Sắp xếp theo thứ tự dung lượng
+      _availStorages.sort((a, b) {
+        int getSize(String s) {
+          if (s.contains('GB')) return int.parse(s.replaceAll('GB', ''));
+          if (s.contains('TB')) return int.parse(s.replaceAll('TB', '')) * 1024;
+          return 0;
+        }
+        return getSize(a).compareTo(getSize(b));
+      });
+
+      // Chọn mặc định storage đầu tiên
+      if (_availStorages.isNotEmpty) {
+        _selectedStorage = _availStorages[0];
+        _updateAvailableColorsForStorage(_selectedStorage!);
+      }
+    } else {
+      // ========== XỬ LÝ SẢN PHẨM CHỈ CÓ MÀU (Tai nghe) ==========
+      _availStorages = [];
+      _selectedStorage = null;
+
+      // ✅ QUAN TRỌNG: Lấy tất cả màu trực tiếp
+      Set<String> colorSet = {};
+      for (var v in variants) {
+        var attr = v['attributes'] ?? {};
+        if (attr.containsKey('color')) {
+          colorSet.add(attr['color']);
+        }
+      }
+      _availColors = colorSet.toList();
+
+      // Chọn mặc định màu đầu tiên
+      if (_availColors.isNotEmpty) {
+        _selectedColor = _availColors[0];
+      }
     }
   }
 
@@ -157,7 +184,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     try {
       return _rawVariants.firstWhere((v) {
         var attr = v['attributes'] ?? {};
-        // ✅ So sánh đơn giản: cả storage và color đều là string
+
+        // Nếu sản phẩm không có storage (VD: tai nghe, phụ kiện)
+        if (_selectedStorage == null) {
+          return attr['color'] == _selectedColor;
+        }
+
+        // Nếu sản phẩm có storage (VD: điện thoại, laptop)
         return attr['storage'] == _selectedStorage &&
             attr['color'] == _selectedColor;
       });
@@ -221,8 +254,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     num currentPrice = currentVariant != null
         ? (currentVariant['price'] ?? _productData!['basePrice'])
         : (_productData!['basePrice'] ?? 0);
-    num originalPrice = _productData!['originalPrice'] ?? 0;
-    // Rating
+
+// Lấy originalPrice: Ưu tiên từ variant, nếu không có lấy từ product
+    num originalPrice = currentVariant != null
+        ? (currentVariant['originalPrice'] ?? _productData!['originalPrice'] ?? currentPrice)
+        : (_productData!['originalPrice'] ?? currentPrice);
+
+// Rating
     num ratingAverage = _productData!['ratingAverage'] ?? 0;
     num reviewCount = _productData!['reviewCount'] ?? 0;
     // 2. Lấy ảnh: Ưu tiên ảnh variant, nếu không có lấy ảnh bìa đầu tiên
@@ -416,7 +454,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                       // Tìm variant tương ứng
                                       var variantForThisColor = _rawVariants.firstWhere((v) {
                                         var attr = v['attributes'];
-                                        // ✅ So sánh đơn giản
+
+                                        // Nếu không có storage
+                                        if (_selectedStorage == null) {
+                                          return attr['color'] == colorName;
+                                        }
+
+                                        // Nếu có storage
                                         return attr['storage'] == _selectedStorage &&
                                             attr['color'] == colorName;
                                       }, orElse: () => {});
