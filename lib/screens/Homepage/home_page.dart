@@ -803,17 +803,15 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-// File: home_page.dart
 
   Widget _buildFilterChips() {
-    // Danh sách này PHẢI GIỐNG HỆT tên (name) bên HotProductPage
     final filters = ['Điện thoại', 'Laptop', 'Màn hình', 'Âm thanh'];
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 12.0),
       child: Row(
-        children: filters.map((filterName) => Padding( // Đổi tên biến thành filterName cho dễ hiểu
+        children: filters.map((filterName) => Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
           child: ActionChip(
             label: Text(filterName),
@@ -860,7 +858,7 @@ class ProductCard extends StatelessWidget {
     return format.format(price);
   }
 
-  // Helper to build tags with custom colors
+
   Widget _buildPromoTag(String text, Color bg, Color txt) {
     return Container(
       margin: const EdgeInsets.only(top: 4.0),
@@ -912,7 +910,7 @@ class ProductCard extends StatelessWidget {
                 ClipRRect(
                   borderRadius: BorderRadius.vertical(top: Radius.circular(12.0)),
                   child: Image.network(imageUrl,
-                      height: 150, // Fixed height for image area
+                      height: 150,
                       width: double.infinity,
                       fit: BoxFit.contain,
                       errorBuilder: (ctx, err, stack) => Container(

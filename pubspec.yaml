@@ -120,12 +120,10 @@ dependency_overrides:
 carousel_slider: ^4.2.1
 firebase_core: ^2.27.0
 cloud_firestore: ^4.15.8
-intl: ^0.19.0 # Để định dạng tiền tệ
+intl: ^0.19.0
 flutter_launcher_icons:
-  # Thiết lập chung
   android: true
   ios: true
-  # ĐƯỜNG DẪN ĐẾN ICON CỦA BẠN (Đã chuẩn bị ở B1)
   image_path: "assets/images/logo_darter.png"
   min_sdk_android: 21 # SDK tối thiểu của Android.
 
